@@ -521,7 +521,7 @@ def c_file_source(fp, directives_only=False):
     if parsing_failed:
         raise RuntimeError(
             "Parsing failed. Please open a bug report at: "
-            "https://github.com/intel/code-base-investigator/issues/new?template=bug_report.yml",  # noqa: E501
+            "https://github.com/P3HPC/code-base-investigator/issues/new?template=bug_report.yml",  # noqa: E501
         )
 
     return (total_sloc, total_physical_lines)
@@ -602,7 +602,7 @@ def fortran_file_source(fp):
     if parsing_failed:
         raise RuntimeError(
             "Parsing failed. Please open a bug report at: "
-            "https://github.com/intel/code-base-investigator/issues/new?template=bug_report.yml",  # noqa: E501
+            "https://github.com/P3HPC/code-base-investigator/issues/new?template=bug_report.yml",  # noqa: E501
         )
 
     return (total_sloc, total_physical_lines)

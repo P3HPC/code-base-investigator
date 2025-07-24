@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/intel/p3-analysis-library/main/p3/data/coverage.schema",
+  "$id": "https://raw.githubusercontent.com/P3HPC/p3-analysis-library/main/p3/data/coverage.schema",
   "title": "Coverage",
   "description": "Lines of code used in each file of a code base.",
   "type": "array",
