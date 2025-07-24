@@ -24,4 +24,4 @@ identifiers:
   - description: Latest release.
     type: doi
     value: "10.5281/zenodo.15422620"
-url: "https://github.com/intel/code-base-investigator"
+url: "https://github.com/P3HPC/code-base-investigator"

@@ -11,7 +11,7 @@ This tutorial uses a sample code base designed to showcase the features of CBI.
    It can be downloaded from :download:`here<sample-code-base.zip>` or copied
    from the ``docs/source/sample-code-base`` directory `on GitHub`_.
 
-.. _on GitHub: https://github.com/intel/code-base-investigator/tree/main/docs/sample-code-base/
+.. _on GitHub: https://github.com/P3HPC/code-base-investigator/tree/main/docs/sample-code-base/
 
 
 Directory Structure

@@ -21,7 +21,7 @@ with the `P3 Analysis Library`_:
    https://doi.org/10.1016/j.future.2017.08.007
 
 .. _P3 Analysis Library:
-   https://intel.github.io/p3-analysis-library/
+   https://p3hpc.github.io/p3-analysis-library/
 
 This definition is deliberately very flexible, so a platform can represent
 **any** execution environment for which code may be specialized. A platform

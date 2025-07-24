@@ -6,8 +6,8 @@ welcome community contributions. You can:
 - Submit your changes directly with a [pull request][1].
 - File a bug or open a feature request with an [issue][2].
 
-[1]: https://github.com/intel/code-base-investigator/pulls
-[2]: https://github.com/intel/code-base-investigator/issues
+[1]: https://github.com/P3HPC/code-base-investigator/pulls
+[2]: https://github.com/P3HPC/code-base-investigator/issues
 
 # Pull Requests
 
