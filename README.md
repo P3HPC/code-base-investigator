@@ -86,9 +86,8 @@ production.  Tagged releases are available
 
 ## Code of Conduct
 
-Intel has adopted the Contributor Covenant as the Code of Conduct for all of
-its open source projects. See [CODE OF CONDUCT](CODE_OF_CONDUCT.md) for more
-information.
+We have adopted the Contributor Covenant as the Code of Conduct for this
+project. See [CODE OF CONDUCT](CODE_OF_CONDUCT.md) for more information.
 
 
 ## Citations
