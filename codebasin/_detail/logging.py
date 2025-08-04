@@ -111,7 +111,7 @@ class MetaWarning:
             return True
         return False
 
-    def warn(self, logger: logging.Logger):
+    def warn(self, logger: logging.Logger) -> None:
         """
         Produce the warning associated with this MetaWarning.
 
@@ -133,7 +133,7 @@ class WarningAggregator(logging.Filter):
     warning passing through a logger.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.meta_warnings = [
             MetaWarning(".", "{} warnings generated during preprocessing."),
             MetaWarning(
@@ -176,7 +176,7 @@ class WarningAggregator(logging.Filter):
                 meta_warning.inspect(record)
         return True
 
-    def warn(self, logger: logging.Logger):
+    def warn(self, logger: logging.Logger) -> None:
         """
         Produce the warning associated with any MetaWarning(s) that were
         matched by this WarningAggregator.
