@@ -96,7 +96,7 @@ class ParserState:
         dict[frozenset, int]
             The number of lines associated with each platform set.
         """
-        setmap = collections.defaultdict(int)
+        setmap: dict[frozenset, int] = collections.defaultdict(int)
         for fn in codebase:
             # Don't count symlinks if their target is in the code base.
             # The target will be counted separately.
