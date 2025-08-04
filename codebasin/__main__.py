@@ -18,7 +18,11 @@ log = logging.getLogger("codebasin")
 _traceback = False
 
 
-def _help_string(*lines: str, is_long=False, is_last=False):
+def _help_string(
+    *lines: str,
+    is_long: bool = False,
+    is_last: bool = False,
+) -> str:
     """
     Parameters
     ----------
@@ -55,7 +59,7 @@ def _help_string(*lines: str, is_long=False, is_last=False):
     return result
 
 
-def _main():
+def _main() -> None:
     # Read command-line arguments
     parser = argparse.ArgumentParser(
         description="Code Base Investigator " + str(__version__),
@@ -260,7 +264,7 @@ def _main():
     # Count lines for platforms
     setmap = state.get_setmap(codebase)
 
-    def report_enabled(name):
+    def report_enabled(name: str) -> bool:
         if "all" in args.reports or len(args.reports) == 0:
             return True
         return name in args.reports
@@ -285,7 +289,7 @@ def _main():
     sys.exit(0)
 
 
-def main():
+def main() -> None:
     try:
         _main()
     except Exception as e:
