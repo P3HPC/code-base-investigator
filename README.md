@@ -16,7 +16,7 @@ portability and maintainability of an application's source code.
 - Identify stale, legacy, code paths that are unused by any compilation target.
 
 - Export metrics and code path information required for P3 analysis using [other
-  tools](https://intel.github.io/p3-analysis-library/).
+  tools](https://p3hpc.github.io/p3-analysis-library/).
 
 
 ## Table of Contents
@@ -49,7 +49,7 @@ The latest release of CBI is version 2.0.0. To download and install this
 release, run the following:
 
 ```
-pip install git+https://github.com/intel/code-base-investigator@2.0.0
+pip install git+https://github.com/P3HPC/code-base-investigator@2.0.0
 ```
 
 We strongly recommend installing CBI within a [virtual
@@ -60,7 +60,7 @@ environment](https://docs.python.org/3/library/venv.html).
 After installation, run `codebasin -h` to see a complete list of options.
 
 A full tutorial can be found in the [online
-documentation](https://intel.github.io/code-base-investigator/).
+documentation](https://p3hpc.github.io/code-base-investigator/).
 
 
 ## Contribute
@@ -81,14 +81,13 @@ See [SECURITY](SECURITY.md) for more information.
 
 The main branch of CBI is the development branch, and should not be used in
 production.  Tagged releases are available
-[here](https://github.com/intel/code-base-investigator/releases).
+[here](https://github.com/P3HPC/code-base-investigator/releases).
 
 
 ## Code of Conduct
 
-Intel has adopted the Contributor Covenant as the Code of Conduct for all of
-its open source projects. See [CODE OF CONDUCT](CODE_OF_CONDUCT.md) for more
-information.
+We have adopted the Contributor Covenant as the Code of Conduct for this
+project. See [CODE OF CONDUCT](CODE_OF_CONDUCT.md) for more information.
 
 
 ## Citations

@@ -6,7 +6,7 @@ requires = ["setuptools>=64", "setuptools-scm>=8"]
 
 [project]
 authors = [
-  {"name" = "S. John Pennycook", "email" = "john.pennycook@intel.com"},
+  {"name" = "S. John Pennycook", "email" = "john.pennycook@gmail.com"},
 ]
 description = "Code Base Investigator"
 dynamic = ["version", "readme"]
@@ -39,9 +39,9 @@ cbi-cov = "codebasin.coverage:__main__.main"
 cbi-tree = "codebasin:tree.main"
 
 [project.urls]
-"Github" = "https://www.github.com/intel/code-base-investigator"
-"Issues" = "https://www.github.com/intel/code-base-investigator/issues"
-"Pull requests" = "https://www.github.com/intel/code-base-investigator/pulls"
+"Github" = "https://www.github.com/P3HPC/code-base-investigator"
+"Issues" = "https://www.github.com/P3HPC/code-base-investigator/issues"
+"Pull requests" = "https://www.github.com/P3HPC/code-base-investigator/pulls"
 
 [project.optional-dependencies]
 dev = [
