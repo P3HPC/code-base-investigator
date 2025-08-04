@@ -23,7 +23,7 @@ from codebasin import CompilationDatabase, util
 
 log = logging.getLogger(__name__)
 
-_compilers = {}
+_compilers: dict[str, _Compiler] = {}
 
 
 class _StoreSplitAction(argparse.Action):
@@ -36,9 +36,9 @@ class _StoreSplitAction(argparse.Action):
         self,
         option_strings: list[str],
         dest: str,
-        nargs=None,
-        **kwargs,
-    ):
+        nargs: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         self.sep = kwargs.pop("sep", None)
         self.format = kwargs.pop("format", None)
         super().__init__(option_strings, dest, nargs=nargs, **kwargs)
@@ -73,9 +73,9 @@ class _ExtendMatchAction(argparse.Action):
         self,
         option_strings: list[str],
         dest: str,
-        nargs=None,
-        **kwargs,
-    ):
+        nargs: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         self.pattern = kwargs.pop("pattern", None)
         self.format = kwargs.pop("format", None)
         self.override = kwargs.pop("override", False)
@@ -165,7 +165,7 @@ class _Compiler:
         return _Compiler(**kwargs)
 
 
-def _load_compilers():
+def _load_compilers() -> None:
     """
     Load the configuration from the following files:
     - ${PACKAGE}/compilers/*.toml
@@ -175,11 +175,13 @@ def _load_compilers():
     _compilers = {}
 
     # Load the package-provided configuration files.
-    for compiler in ["clang", "gnu", "intel", "nvidia"]:
-        filename = str((Path("compilers") / compiler).with_suffix(".toml"))
-        toml = tomllib.loads(
-            pkgutil.get_data("codebasin", filename).decode(),
-        )
+    for stem in ["clang", "gnu", "intel", "nvidia"]:
+        filename = str((Path("compilers") / stem).with_suffix(".toml"))
+        data = pkgutil.get_data("codebasin", filename)
+        if data is None:
+            log.error(f"Failed to load definition of '{stem}' compiler.")
+            break
+        toml = tomllib.loads(data.decode())
         try:
             util._validate_toml(toml, "cbiconfig")
         except ValueError as e:
@@ -270,7 +272,7 @@ class PreprocessorConfiguration:
     include_files: list[str]
     pass_name: str = "default"
 
-    def _update(self, pass_or_mode: _CompilerPass | _CompilerMode):
+    def _update(self, pass_or_mode: _CompilerPass | _CompilerMode) -> None:
         """
         Update this PreprocessorConfiguration by extending the
         defines, include paths and include files using the values
@@ -291,7 +293,7 @@ class ArgumentParser:
     Represents the behavior of a specific compiler.
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         self.name = os.path.basename(path)
 
         # Load the global compiler configuration if necessary.
@@ -444,7 +446,10 @@ class ArgumentParser:
         return configurations
 
 
-def load_database(dbpath, rootdir):
+def load_database(
+    dbpath: str | os.PathLike[str],
+    rootdir: str | os.PathLike[str],
+) -> list[dict[str, Any]]:
     """
     Load a compilation database.
     Return a list of compilation commands, where each command is
@@ -468,8 +473,7 @@ def load_database(dbpath, rootdir):
                 filedir = command.directory
             else:
                 filedir = os.path.abspath(
-                    rootdir,
-                    os.path.join(command.directory),
+                    os.path.join(rootdir, command.directory),
                 )
 
         if os.path.isabs(command.filename):
