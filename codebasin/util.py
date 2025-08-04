@@ -95,12 +95,12 @@ def valid_path(path: os.PathLike[str]) -> bool:
     valid = True
 
     # Check for null byte character(s)
-    if "\x00" in path:
+    if "\x00" in str(path):
         log.critical("Null byte character in file request.")
         valid = False
 
     # Check for carriage returns or line feed character(s)
-    if ("\n" in path) or ("\r" in path):
+    if ("\n" in str(path)) or ("\r" in str(path)):
         log.critical("Carriage return or line feed character in file request.")
         valid = False
 
@@ -223,7 +223,7 @@ def _load_json(file_object: typing.TextIO, schema_name: str) -> object:
 
 
 def _load_toml(
-    file_object: typing.TextIO,
+    file_object: typing.IO,
     schema_name: str,
 ) -> dict[str, typing.Any]:
     """
@@ -231,7 +231,7 @@ def _load_toml(
 
     Parameters
     ----------
-    file_object : typing.TextIO
+    file_object : typing.IO
         The file object to load from.
 
     schema_name : {'cbiconfig', 'analysis'}

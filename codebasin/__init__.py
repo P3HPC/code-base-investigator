@@ -1,8 +1,11 @@
 # Copyright (C) 2019-2024 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import importlib.metadata
 import os
 import shlex
+import typing
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
@@ -152,7 +155,7 @@ class CompilationDatabase:
         yield from self.commands
 
     @classmethod
-    def from_json(cls, instance: list):
+    def from_json(cls, instance: list) -> CompilationDatabase:
         """
         Parameters
         ----------
@@ -174,7 +177,10 @@ class CompilationDatabase:
         return cls(commands)
 
     @classmethod
-    def from_file(cls, filename: str | os.PathLike[str]):
+    def from_file(
+        cls,
+        filename: str | os.PathLike[str],
+    ) -> CompilationDatabase:
         """
         Parameters
         ---------
@@ -194,8 +200,8 @@ class CompilationDatabase:
             A CompilationDatbase corresponding to the provided JSON file.
         """
         with open(filename) as f:
-            db = codebasin.util._load_json(f, schema_name="compiledb")
-        return CompilationDatabase.from_json(db)
+            db: object = codebasin.util._load_json(f, schema_name="compiledb")
+        return CompilationDatabase.from_json(typing.cast(list, db))
 
 
 class CodeBase:
