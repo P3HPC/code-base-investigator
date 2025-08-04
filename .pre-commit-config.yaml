@@ -70,7 +70,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        args: []
+        args: ["--disallow-untyped-defs"]
         additional_dependencies:
           [
             "types-jsonschema",
@@ -79,3 +79,4 @@ repos:
             "scipy-stubs",
             "matplotlib", # There are no official stubs for matplotlib
           ]
+        exclude: "^tests/"
