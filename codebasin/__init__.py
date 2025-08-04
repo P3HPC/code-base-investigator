@@ -155,7 +155,7 @@ class CompilationDatabase:
     def __init__(self, commands: list[CompileCommand]):
         self.commands = commands
 
-    def __iter__(self) -> Generator[CompileCommand]:
+    def __iter__(self) -> Generator[CompileCommand, None, None]:
         """
         Iterate over all commands in the compilation database.
         """
@@ -310,7 +310,7 @@ class CodeBase:
 
         return True
 
-    def __iter__(self) -> Generator[str]:
+    def __iter__(self) -> Generator[str, None, None]:
         """
         Iterate over all files in the code base by walking each directory.
         """
