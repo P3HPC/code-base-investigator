@@ -64,3 +64,18 @@ repos:
       - id: bandit
         name: bandit
         args: ["-c", ".bandit"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.1
+    hooks:
+      - id: mypy
+        name: mypy
+        args: []
+        additional_dependencies:
+          [
+            "types-jsonschema",
+            "types-tqdm",
+            "types-tabulate",
+            "scipy-stubs",
+            "matplotlib", # There are no official stubs for matplotlib
+          ]

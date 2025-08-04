@@ -4,6 +4,7 @@
 Contains functions to build up a configuration dictionary,
 defining a specific code base configuration.
 """
+from __future__ import annotations
 
 import argparse
 import logging
@@ -12,16 +13,17 @@ import pkgutil
 import re
 import string
 import tomllib
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from itertools import chain
 from pathlib import Path
-from typing import Self
+from typing import Any
 
 from codebasin import CompilationDatabase, util
 
 log = logging.getLogger(__name__)
 
-_compilers = None
+_compilers = {}
 
 
 class _StoreSplitAction(argparse.Action):
@@ -45,9 +47,9 @@ class _StoreSplitAction(argparse.Action):
         self,
         parser: argparse.ArgumentParser,
         namespace: argparse.Namespace,
-        values: str,
-        option_string: str,
-    ):
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         if not isinstance(values, str):
             raise TypeError("store_split expects string values")
         split_values = values.split(self.sep)
@@ -84,9 +86,9 @@ class _ExtendMatchAction(argparse.Action):
         self,
         parser: argparse.ArgumentParser,
         namespace: argparse.Namespace,
-        value: str,
-        option_string: str,
-    ):
+        value: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         if not isinstance(value, str):
             raise TypeError("extend_match expects string value")
         matches = re.findall(self.pattern, value)
@@ -118,7 +120,7 @@ class _CompilerMode:
     include_files: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_toml(cls, toml: object) -> Self:
+    def from_toml(cls, toml: dict[str, Any]) -> _CompilerMode:
         return _CompilerMode(**toml)
 
 
@@ -131,7 +133,7 @@ class _CompilerPass:
     modes: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_toml(cls, toml: object) -> Self:
+    def from_toml(cls, toml: dict[str, Any]) -> _CompilerPass:
         return _CompilerPass(**toml)
 
 
@@ -144,7 +146,7 @@ class _Compiler:
     passes: dict[str, _CompilerPass] = field(default_factory=dict)
 
     @classmethod
-    def from_toml(cls, toml: object) -> Self:
+    def from_toml(cls, toml: dict[str, Any]) -> _Compiler:
         kwargs = toml.copy()
         if "parser" in kwargs:
             for option in kwargs["parser"]:
