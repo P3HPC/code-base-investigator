@@ -620,7 +620,7 @@ class CodeNode(Node):
     end_line: int = field(default=-1, init=False)
     num_lines: int = field(default=0, init=False)
     source: str | None = field(default=None, init=False, repr=False)
-    lines: list[str] | None = field(
+    lines: list[int] | None = field(
         default_factory=list,
         init=False,
         repr=False,
