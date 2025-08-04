@@ -128,11 +128,13 @@ def _compute(args: argparse.Namespace):
         with open(filename, "rb") as f:
             digest = hashlib.file_digest(f, "sha512")
 
-        used_lines = []
-        unused_lines = []
+        used_lines: list[int] = []
+        unused_lines: list[int] = []
         tree = state.get_tree(filename)
         association = state.get_map(filename)
         for node in [n for n in tree.walk() if isinstance(n, CodeNode)]:
+            if not node.lines:
+                continue
             if association[node] == frozenset([]):
                 unused_lines.extend(node.lines)
             else:
