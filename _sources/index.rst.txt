@@ -33,8 +33,8 @@ Code Base Investigator
    :hidden:
    :caption: Contributing
 
-   How to Contribute <https://github.com/intel/code-base-investigator/blob/main/CONTRIBUTING.md>
-   GitHub <https://github.com/intel/code-base-investigator>
+   How to Contribute <https://github.com/P3HPC/code-base-investigator/blob/main/CONTRIBUTING.md>
+   GitHub <https://github.com/P3HPC/code-base-investigator>
    notices-and-disclaimers
 
 
@@ -53,7 +53,7 @@ portability and maintainability of an application's source code.
 - Export metrics and code path information required for P3 analysis using
   `other tools`_.
 
-.. _other tools: https://intel.github.io/p3-analysis-library/index.html
+.. _other tools: https://p3hpc.github.io/p3-analysis-library/index.html
 
 
 Installation
@@ -62,7 +62,7 @@ Installation
 The latest release of CBI is version 2.0.0. To download and install this
 release, run the following::
 
-    $ pip install git+https://github.com/intel/code-base-investigator@2.0.0
+    $ pip install git+https://github.com/P3HPC/code-base-investigator@2.0.0
 
 We strongly recommend installing CBI within a virtual environment, to simplify
 dependency management and improve security. Some alternative methods of
@@ -72,7 +72,7 @@ creating a virtual environment are shown below.
 
     .. code-block:: text
 
-        $ git clone --branch 2.0.0 https://github.com/intel/code-base-investigator.git
+        $ git clone --branch 2.0.0 https://github.com/P3HPC/code-base-investigator.git
         $ python3 -m venv cbi
         $ source cbi/bin/activate
         $ cd code-base-investigator
@@ -82,7 +82,7 @@ creating a virtual environment are shown below.
 
     .. code-block:: text
 
-        $ git clone --branch 2.0.0 https://github.com/intel/code-base-investigator.git
+        $ git clone --branch 2.0.0 https://github.com/P3HPC/code-base-investigator.git
         $ cd code-base-investigator
         $ uv tool install .
 

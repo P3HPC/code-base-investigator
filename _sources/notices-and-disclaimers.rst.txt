@@ -14,4 +14,4 @@ License
 =======
 
 Code Base Investigator (CBI) is licensed under the BSD-3-Clause License, and
-made available at http://github.com/intel/code-base-investigator/.
+made available at http://github.com/P3HPC/code-base-investigator/.

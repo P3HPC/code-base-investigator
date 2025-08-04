@@ -15,7 +15,7 @@ additional options when emulating certain compilers.
     If you encounter a situation that is not supported by CBI and which cannot
     be described by our existing configuration files, please `open an issue`_.
 
-.. _`open an issue`: https://github.com/intel/code-base-investigator/issues/new/choose
+.. _`open an issue`: https://github.com/P3HPC/code-base-investigator/issues/new/choose
 
 
 Motivating Example
@@ -138,7 +138,7 @@ CBI ships with a number of compiler definitions included (see `here`_), and the
 same syntax can be used to define custom compiler behaviors within the
 ``.cbi/config`` file.
 
-.. _`here`: https://github.com/intel/code-base-investigator/tree/main/codebasin/compilers
+.. _`here`: https://github.com/P3HPC/code-base-investigator/tree/main/codebasin/compilers
 
 For example, the TOML file below defines behavior for the ``gcc`` and ``g++`` compilers:
 
