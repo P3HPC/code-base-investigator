@@ -21,7 +21,10 @@ import jsonschema
 log = logging.getLogger(__name__)
 
 
-def ensure_ext(path: os.PathLike[str], extensions: Iterable[str]) -> None:
+def ensure_ext(
+    path: str | os.PathLike[str],
+    extensions: Iterable[str],
+) -> None:
     """
     Ensure that a path has one of the specified extensions.
 
@@ -54,7 +57,7 @@ def ensure_ext(path: os.PathLike[str], extensions: Iterable[str]) -> None:
         raise ValueError(f"{path} does not have a valid extension: {exts}")
 
 
-def safe_open_write_binary(fname: os.PathLike[str]) -> typing.BinaryIO:
+def safe_open_write_binary(fname: str | os.PathLike[str]) -> typing.BinaryIO:
     """Open fname for (binary) writing. Truncate if not a symlink."""
     fpid = os.open(
         fname,
@@ -64,7 +67,7 @@ def safe_open_write_binary(fname: os.PathLike[str]) -> typing.BinaryIO:
     return os.fdopen(fpid, "wb")
 
 
-def valid_path(path: os.PathLike[str]) -> bool:
+def valid_path(path: str | os.PathLike[str]) -> bool:
     """
     Check if a given file path is valid.
 
@@ -74,7 +77,7 @@ def valid_path(path: os.PathLike[str]) -> bool:
 
     Parameters
     ----------
-    path : os.PathLike[str]
+    path : str | os.PathLike[str]
         The file path to be validated.
 
     Returns

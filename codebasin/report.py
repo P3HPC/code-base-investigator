@@ -15,7 +15,7 @@ import string
 import sys
 import warnings
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Self, TextIO
 
@@ -129,11 +129,11 @@ def average_coverage(
     if len(platforms) == 0:
         return float("nan")
 
-    total = sum([coverage(setmap, [p]) for p in platforms])
+    total = sum([coverage(setmap, {p}) for p in platforms])
     return total / len(platforms)
 
 
-def distance(setmap, p1, p2):
+def distance(setmap, p1, p2) -> float:
     """
     Compute distance between two platforms
     """
@@ -148,14 +148,14 @@ def distance(setmap, p1, p2):
     return d
 
 
-def divergence(setmap):
+def divergence(setmap) -> float:
     """
     Compute code divergence as defined by Harrell and Kitson
     i.e. average of pair-wise distances between platform sets
     """
     platforms = extract_platforms(setmap)
 
-    d = 0
+    d = 0.0
     npairs = 0
     for p1, p2 in it.combinations(platforms, 2):
         d += distance(setmap, p1, p2)
@@ -166,14 +166,14 @@ def divergence(setmap):
     return d / float(npairs)
 
 
-def summary(setmap: defaultdict[str, int], stream: TextIO = sys.stdout):
+def summary(setmap: dict[frozenset[str], int], stream: TextIO = sys.stdout):
     """
     Produce a summary report for the platform set, including
     a breakdown of SLOC per platform subset, code divergence, etc.
 
     Parameters
     ----------
-    setmap: defaultdict[str, int]
+    setmap: dict[frozenset[str], int]
         The setmap used to compute the summary report.
 
     stream: TextIO, default: sys.stdout
@@ -214,7 +214,7 @@ def summary(setmap: defaultdict[str, int], stream: TextIO = sys.stdout):
 
 def clustering(
     output_name: str,
-    setmap: defaultdict[str, int],
+    setmap: dict[frozenset[str], int],
     stream: TextIO = sys.stdout,
 ):
     """
@@ -225,7 +225,7 @@ def clustering(
     output_name: str
         The filename for the dendrogram.
 
-    setmap: defaultdict[str, int]
+    setmap: dict[frozenset[str], int]
         The setmap used to compute the clustering statistics.
 
     stream: TextIO, default: sys.stdout
@@ -313,7 +313,7 @@ def find_duplicates(codebase: CodeBase) -> list[set[Path]]:
         A list of all sets of Paths with identical contents.
     """
     # Search for possible matches using a hash, ignoring symlinks.
-    possible_matches = {}
+    possible_matches: dict[str, set] = {}
     for path in codebase:
         path = Path(path)
         if path.is_symlink():
@@ -486,7 +486,7 @@ class FileTree:
         def _platforms_str(
             self,
             all_platforms: set[str],
-            labels: Iterable[str] = string.ascii_uppercase,
+            labels: Sequence[str] = string.ascii_uppercase,
         ) -> str:
             """
             Parameters
@@ -494,7 +494,7 @@ class FileTree:
             all_platforms: set[str]
                 The set of all platforms.
 
-            labels: Iterable[str], default: string.ascii_uppercase
+            labels: Sequence[str], default: string.ascii_uppercase
                 The labels to use in place of real platform names.
 
             Returns
@@ -605,7 +605,7 @@ class FileTree:
     def insert(
         self,
         filename: str | os.PathLike[str],
-        setmap: defaultdict[str, int],
+        setmap: dict[frozenset[str], int],
     ):
         """
         Insert a new file into the tree, creating as many nodes as necessary.
@@ -653,7 +653,7 @@ class FileTree:
         prefix: str = "",
         connector: str = "",
         fancy: bool = True,
-        levels: int = None,
+        levels: int | None = None,
     ):
         """
         Recursive helper function to print all nodes in a FileTree.
@@ -740,7 +740,7 @@ class FileTree:
 
         return lines
 
-    def write_to(self, stream: TextIO, levels: int = None):
+    def write_to(self, stream: TextIO, levels: int | None = None):
         """
         Write the FileTree to the specified stream.
 
@@ -766,7 +766,7 @@ def files(
     *,
     stream: TextIO = sys.stdout,
     prune: bool = False,
-    levels: int = None,
+    levels: int | None = None,
 ):
     """
     Produce a file tree representing the code base.
@@ -796,7 +796,7 @@ def files(
     # Build up a tree from the list of files.
     tree = FileTree(codebase.directories[0])
     for f in codebase:
-        setmap = defaultdict(int)
+        setmap: dict[frozenset[str], int] = defaultdict(int)
         if state:
             association = state.get_map(f)
             for node in filter(
@@ -828,10 +828,10 @@ def files(
     ]
     legend += ["[" + " | ".join(header) + "]"]
     legend += [""]
-    legend = "\n".join(legend)
+    legend_string = "\n".join(legend)
     if not stream.isatty():
-        legend = _strip_colors(legend)
-    print(legend, file=stream)
+        legend_string = _strip_colors(legend_string)
+    print(legend_string, file=stream)
 
     # Print the tree.
     tree.write_to(stream, levels=levels)
