@@ -619,7 +619,7 @@ class CodeNode(Node):
     start_line: int = field(default=-1, init=False)
     end_line: int = field(default=-1, init=False)
     num_lines: int = field(default=0, init=False)
-    source: str | None = field(default=None, init=False, repr=False)
+    source: list[str] | None = field(default=None, init=False, repr=False)
     lines: list[int] | None = field(
         default_factory=list,
         init=False,
@@ -631,7 +631,7 @@ class CodeNode(Node):
         start_line: int = -1,
         end_line: int = -1,
         num_lines: int = 0,
-        source: str | None = None,
+        source: list[str] | None = None,
         lines: list[int] | None = None,
     ):
         super().__init__()

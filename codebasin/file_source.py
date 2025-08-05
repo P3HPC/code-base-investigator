@@ -463,7 +463,6 @@ class line_info:
 
 def c_file_source(
     fp: TextIO,
-    *,
     directives_only: bool = False,
 ) -> Generator[line_info, None, tuple[int, int]]:
     """
@@ -709,14 +708,12 @@ def asm_file_source(fp: TextIO) -> Generator[line_info, None, tuple[int, int]]:
     return (total_sloc, total_physical_lines)
 
 
-# FIXME: The return type of this function suggests it is too complicated.
+# FIXME: Specifying the return type of this function precisely is too hard,
+#        suggesting it is too complicated.
 def get_file_source(
     path: str,
     assumed_lang: str | None = None,
-) -> (
-    Callable[[TextIO], Generator[line_info, None, tuple[int, int]]]
-    | Callable[[TextIO, bool], Generator[line_info, None, tuple[int, int]]]
-):
+) -> Callable:
     """
     Return a C or Fortran line source for path depending on
     the language we can detect, or fail.
