@@ -6,15 +6,17 @@ Contains classes that define:
 - Tokens from lexing a line of code
 - Operators to handle tokens
 """
+from __future__ import annotations
 
 import collections
 import logging
 import os
+import typing
 from collections.abc import Callable, Iterable
 from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Self
+from typing import Any
 
 import numpy as np
 
@@ -23,7 +25,12 @@ from codebasin import util
 log = logging.getLogger(__name__)
 
 
-def _representation_string(obj, *, name=None, attrs=None):
+def _representation_string(
+    obj: Any,
+    *,
+    name: str | None = None,
+    attrs: list[str] | None = None,
+) -> str:
     """
     Helper function to build representation strings of the form:
     Name(attribute={attribute!r},...)
@@ -60,22 +67,25 @@ class Token:
     Represents a token constructed by the parser.
     """
 
-    line: int
+    # FIXME: Use -1 for unknown lines instead of "Unknown" string.
+    line: int | str
     col: int
     prev_white: bool
+
+    # FIXME: Token.token is a bad name and makes code hard to read.
     token: str
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "\n".join(self.spelling())
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return the string representation of this token in the input code.
         Useful primarily for debugging and generating error messages.
         """
         return [str(self.token)]
 
-    def sanitized_str(self):
+    def sanitized_str(self) -> str:
         """
         Dummy based implementation of string sanitization.
         Overloaded for String Constant.
@@ -105,14 +115,14 @@ class StringConstant(Token):
     Represents a string constant.
     """
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return the string representation of this token in the input code.
         Useful primarily for debugging and generating error messages.
         """
         return [f'"{self.token!s}"']
 
-    def sanitized_str(self):
+    def sanitized_str(self) -> str:
         """
         Return this string quoted for stringification.
         """
@@ -167,25 +177,25 @@ class Lexer:
     A lexer for the C preprocessor grammar.
     """
 
-    def __init__(self, string, line="Unknown"):
+    def __init__(self, string: str, line: int | str = "Unknown") -> None:
         self.string = string
         self.line = line
         self.pos = 0
         self.prev_white = False
 
-    def read(self, n=1):
+    def read(self, n: int = 1) -> str:
         """
         Return the next n characters in the string.
         """
         return self.string[self.pos : self.pos + n]
 
-    def eos(self):
+    def eos(self) -> bool:
         """
         Return True when the end of the string is reached.
         """
         return self.pos == len(self.string)
 
-    def whitespace(self):
+    def whitespace(self) -> None:
         """
         Consume whitespace and advance position.
         """
@@ -193,7 +203,7 @@ class Lexer:
             self.pos += 1
             self.prev_white = True
 
-    def match(self, literal):
+    def match(self, literal: str) -> None:
         """
         Match a character/string literal exactly and advance position.
         """
@@ -202,7 +212,7 @@ class Lexer:
         else:
             raise TokenError()
 
-    def match_any(self, literals):
+    def match_any(self, literals: list[str]) -> int:
         """
         Match one from a list of character/string literals exactly.
         Return the matched index and advance position.
@@ -214,7 +224,7 @@ class Lexer:
 
         raise TokenError()
 
-    def number(self):
+    def number(self) -> NumericalConstant:
         """
         Construct a NumericalConstant by parsing a string.
         Return a NumericalConstant and advance position.
@@ -263,7 +273,7 @@ class Lexer:
         constant = NumericalConstant(self.line, col, self.prev_white, value)
         return constant
 
-    def character_constant(self):
+    def character_constant(self) -> CharacterConstant:
         """
         Construct a CharacterConstant by parsing a string.
         Return a CharacterConstant and advance position.
@@ -293,7 +303,7 @@ class Lexer:
         constant = CharacterConstant(self.line, col, self.prev_white, value)
         return constant
 
-    def string_constant(self):
+    def string_constant(self) -> StringConstant:
         """
         Construct a StringConstant by parsing a string.
         Return a StringConstant and advance position.
@@ -328,7 +338,7 @@ class Lexer:
         return constant
 
     @staticmethod
-    def stringify(tokens):
+    def stringify(tokens: list[Token]) -> Token | None:
         """
         Return a tokenized string version of an input series of tokens.
         """
@@ -340,7 +350,7 @@ class Lexer:
         parts.append('"')
         return Lexer("".join(parts)).tokenize_one()
 
-    def identifier(self):
+    def identifier(self) -> Identifier:
         """
         Construct an Identifier by parsing a string.
         Return an Identifier and advance position.
@@ -350,7 +360,7 @@ class Lexer:
         col = self.pos
 
         # Match a string of characters
-        characters = []
+        characters: list[str] = []
         while not self.eos() and (self.read().isalnum() or self.read() == "_"):
             # First character of an identifier cannot be a digit
             if self.pos == col and self.read().isdigit():
@@ -372,7 +382,7 @@ class Lexer:
         )
         return identifier
 
-    def operator(self):
+    def operator(self) -> Operator:
         """
         Construct an Operator by parsing a string.
         Return an Operator and advance position.
@@ -409,7 +419,7 @@ class Lexer:
             self.pos = col
             raise TokenError("Invalid operator.")
 
-    def punctuator(self):
+    def punctuator(self) -> Punctuator:
         """
         Construct a Punctuator by parsing a string.
         Return a Punctuator and advance position.
@@ -445,7 +455,7 @@ class Lexer:
             self.pos = col
             raise TokenError("Invalid punctuator.")
 
-    def tokenize_one(self):
+    def tokenize_one(self) -> Token | None:
         """
         Consume and return next token. Returns None if not possible.
         """
@@ -470,7 +480,7 @@ class Lexer:
                 self.prev_white = pws
         return token
 
-    def tokenize(self):
+    def tokenize(self) -> list[Token]:
         """
         Return a list of all tokens in the string.
         """
@@ -518,15 +528,15 @@ class Node:
     Contains a single parent, and an ordered list of children.
     """
 
-    children: list[Self] = field(default_factory=list, init=False)
-    parent: Self | None = field(default=None, init=False)
+    children: list[Node] = field(default_factory=list, init=False)
+    parent: Node | None = field(default=None, init=False)
 
-    def add_child(self, child):
+    def add_child(self, child: Node) -> None:
         self.children.append(child)
         child.parent = self
 
     @staticmethod
-    def is_start_node():
+    def is_start_node() -> bool:
         """
         Used to determine if a node is a start node of a tree.
         Return False by default.
@@ -534,7 +544,7 @@ class Node:
         return False
 
     @staticmethod
-    def is_cont_node():
+    def is_cont_node() -> bool:
         """
         Used to determine if a node is a continue node of a tree.
         Return False by default.
@@ -542,14 +552,14 @@ class Node:
         return False
 
     @staticmethod
-    def is_end_node():
+    def is_end_node() -> bool:
         """
         Used to determine if a node is a end node of a tree.
         Return False by default.
         """
         return False
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         """
         Determine if the children of this node are active, by evaluating
         the statement.
@@ -557,7 +567,7 @@ class Node:
         """
         return False
 
-    def walk(self) -> Iterable[Self]:
+    def walk(self) -> Iterable[Node]:
         """
         Returns
         -------
@@ -569,7 +579,7 @@ class Node:
         for child in self.children:
             yield from child.walk()
 
-    def visit(self, visitor: Callable[[Self], Visit]):
+    def visit(self, visitor: Callable[[Node], Visit]) -> None:
         """
         Visit all descendants of this node via a preorder traversal, using the
         supplied visitor.
@@ -597,10 +607,10 @@ class FileNode(Node):
     num_lines: int = field(default=0, init=False)
     total_sloc: int = field(default=0, init=False)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.filename)
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         """
         Since a FileNode is always used as a root node, we are only
         interested in its children.
@@ -633,7 +643,7 @@ class CodeNode(Node):
         num_lines: int = 0,
         source: list[str] | None = None,
         lines: list[int] | None = None,
-    ):
+    ) -> None:
         super().__init__()
         self.start_line = start_line
         self.end_line = end_line
@@ -644,13 +654,13 @@ class CodeNode(Node):
             self.lines = lines
         self.source = source
 
-    def __str__(self):
+    def __str__(self) -> str:
         start = self.start_line
         end = self.end_line
         sloc = self.num_lines
         return f"Lines {start}-{end}; SLOC = {sloc};"
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return the string representation of this code block in the input code.
         Useful primarily for debugging and generating error messages.
@@ -710,9 +720,10 @@ class PragmaNode(DirectiveNode):
 
     expr: list[Token]
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         if self.expr and str(self.expr[0]) == "once":
             kwargs["platform"].add_include_to_skip(kwargs["filename"])
+        return False
 
 
 @dataclass(eq=False)
@@ -722,13 +733,15 @@ class DefineNode(DirectiveNode):
     """
 
     identifier: Identifier
-    args: list[Token] | None = None
+    args: list[Identifier] | None = None
     value: list[Token] | None = None
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         """
         Add a definition into the platform, and return false
         """
+        if self.value is None:
+            raise RuntimeError("Cannot expand macro to None")
         macro = make_macro(self.identifier, self.args, self.value)
         kwargs["platform"].define(self.identifier.token, macro)
         return False
@@ -742,7 +755,7 @@ class UndefNode(DirectiveNode):
 
     identifier: Identifier
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         """
         Add a definition into the platform, and return false
         """
@@ -755,14 +768,14 @@ class IncludePath:
     Represents an include path enclosed by "" or <>
     """
 
-    def __init__(self, path, system):
+    def __init__(self, path: str | os.PathLike[str], system: bool):
         self.path = path
         self.system = system
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return _representation_string(self)
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return the string representation of this path in the input code.
         Useful primarily for debugging and generating error messages.
@@ -774,7 +787,7 @@ class IncludePath:
             return [f"<{self.path!s}>"]
         return [f'"{self.path!s}"']
 
-    def is_system_path(self):
+    def is_system_path(self) -> bool:
         return self.system
 
 
@@ -787,7 +800,7 @@ class IncludeNode(DirectiveNode):
 
     value: IncludePath | list[Token]
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         """
         Extract the filename from the #include. This cannot happen when
         parsing because of "computed includes" like #include FOO. After
@@ -830,6 +843,8 @@ class IncludeNode(DirectiveNode):
                 + f"{line:>5} | {spelling}",
             )
 
+        return False
+
 
 @dataclass(eq=False)
 class IfNode(DirectiveNode):
@@ -840,10 +855,10 @@ class IfNode(DirectiveNode):
     expr: list[Token]
 
     @staticmethod
-    def is_start_node():
+    def is_start_node() -> bool:
         return True
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         # Perform macro substitution with tokens
         expanded_tokens = MacroExpander(kwargs["platform"]).expand(self.expr)
 
@@ -858,11 +873,11 @@ class ElIfNode(IfNode):
     """
 
     @staticmethod
-    def is_start_node():
+    def is_start_node() -> bool:
         return False
 
     @staticmethod
-    def is_cont_node():
+    def is_cont_node() -> bool:
         return True
 
 
@@ -873,10 +888,10 @@ class ElseNode(DirectiveNode):
     """
 
     @staticmethod
-    def is_cont_node():
+    def is_cont_node() -> bool:
         return True
 
-    def evaluate_for_platform(self, **kwargs):
+    def evaluate_for_platform(self, **kwargs: Any) -> bool:
         return True
 
 
@@ -887,7 +902,7 @@ class EndIfNode(DirectiveNode):
     """
 
     @staticmethod
-    def is_end_node():
+    def is_end_node() -> bool:
         return True
 
 
@@ -896,11 +911,11 @@ class Parser:
     A generic token parser for matching tokens from a list.
     """
 
-    def __init__(self, tokens):
+    def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
         self.pos = 0
 
-    def cursor(self):
+    def cursor(self) -> Token:
         """
         Return the current token in the list.
         """
@@ -909,13 +924,14 @@ class Parser:
         except IndexError:
             raise ParseError("No tokens left for cursor to traverse")
 
-    def eol(self):
+    def eol(self) -> bool:
         """
         Return True when the end of the list is reached.
         """
         return self.pos == len(self.tokens)
 
-    def match_type(self, token_type):
+    # FIXME: It is very difficult to type-hint this function correctly.
+    def match_type(self, token_type: type) -> Token:
         """
         Match a token of the specified type and advance position.
         """
@@ -926,7 +942,7 @@ class Parser:
             raise ParseError(f"Expected {token_type!s}.")
         return token
 
-    def match_value(self, token_type, token_value):
+    def match_value(self, token_type: type, token_value: Any) -> Token:
         """
         Match a token of the specified type and value, and advance
         position.
@@ -947,7 +963,7 @@ class DirectiveParser(Parser):
     A specialized token parser for recognizing directives.
     """
 
-    def __arg(self):
+    def __arg(self) -> Identifier:
         """
         Match an Identifier, Identifier... or ...
 
@@ -958,7 +974,7 @@ class DirectiveParser(Parser):
         # Match optional identifier
         initial_pos = self.pos
         try:
-            arg = self.match_type(Identifier)
+            arg = typing.cast(Identifier, self.match_type(Identifier))
         except ParseError:
             self.pos = initial_pos
 
@@ -979,7 +995,7 @@ class DirectiveParser(Parser):
             return arg
         raise ParseError("Invalid argument")
 
-    def __arg_list(self):
+    def __arg_list(self) -> list[Identifier]:
         """
         Match a comma-separated list of arguments.
         Return a tuple of the Token(s) and advances position..
@@ -1004,12 +1020,12 @@ class DirectiveParser(Parser):
         except ParseError:
             return args
 
-    def macro_definition(self):
+    def macro_definition(self) -> tuple[Identifier, list[Identifier] | None]:
         """
         Match a macro definition.
         Return a tuple of the Identifier and argument list (or None).
         """
-        identifier = self.match_type(Identifier)
+        identifier = typing.cast(Identifier, self.match_type(Identifier))
 
         # Match function-like macro definitions
         arg_pos = self.pos
@@ -1027,7 +1043,7 @@ class DirectiveParser(Parser):
 
         return (identifier, args)
 
-    def define(self):
+    def define(self) -> DefineNode:
         """
         Match a define directive.
         Return a tuple of the Define and the new string position.
@@ -1056,7 +1072,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid define directive.")
 
-    def undef(self):
+    def undef(self) -> UndefNode:
         """
         Match an #undef directive.
         Return an UndefNode.
@@ -1066,13 +1082,16 @@ class DirectiveParser(Parser):
         initial_pos = self.pos
         try:
             self.match_value(Identifier, "undef")
-            identifier = self.match_type(Identifier)
+            identifier = typing.cast(
+                Identifier,
+                self.match_type(Identifier),
+            )
             return UndefNode(self.tokens, identifier)
         except ParseError:
             self.pos = initial_pos
             raise ParseError("Invalid undef directive.")
 
-    def include(self):
+    def include(self) -> IncludeNode:
         """
         Match an #include directive.
         Return an IncludeNode.
@@ -1087,6 +1106,7 @@ class DirectiveParser(Parser):
             path_pos = self.pos
 
             # Match system or local include path
+            include_payload: IncludePath | list[Token]
             try:
                 include_payload = self.include_path()
             except ParseError:
@@ -1100,10 +1120,10 @@ class DirectiveParser(Parser):
 
     def __path(
         self,
-        marker_type=Punctuator,
-        initiator_value='"',
-        terminator_value='"',
-    ):
+        marker_type: type = Punctuator,
+        initiator_value: str = '"',
+        terminator_value: str = '"',
+    ) -> list[Token]:
         """
         Match a path enclosed between the specified initiator and
         terminator values.
@@ -1119,7 +1139,7 @@ class DirectiveParser(Parser):
         self.match_value(marker_type, terminator_value)
         return path
 
-    def include_path(self):
+    def include_path(self) -> IncludePath:
         """
         Match an include path.
         <include-path> := ['<'<path>'>'|'\"'<path>'>']
@@ -1137,7 +1157,10 @@ class DirectiveParser(Parser):
 
         # Match local include
         try:
-            path_token = self.match_type(StringConstant)
+            path_token = typing.cast(
+                StringConstant,
+                self.match_type(StringConstant),
+            )
             path_str = path_token.token
             if util.valid_path(path_str):
                 return IncludePath(path_str, system=False)
@@ -1146,7 +1169,7 @@ class DirectiveParser(Parser):
 
         raise ParseError("Invalid path.")
 
-    def pragma(self):
+    def pragma(self) -> PragmaNode:
         """
         Match a #pragma directive.
         Return a PragmaNode.
@@ -1164,7 +1187,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid pragma directive.")
 
-    def if_(self):
+    def if_(self) -> IfNode:
         """
         Match an #if directive.
         Return an IfNode.
@@ -1182,7 +1205,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid if directive.")
 
-    def ifdef(self):
+    def ifdef(self) -> IfNode:
         """
         Match an #ifdef directive.
         Return an IfNode with defined() in the expression.
@@ -1192,7 +1215,7 @@ class DirectiveParser(Parser):
         initial_pos = self.pos
         try:
             self.match_value(Identifier, "ifdef")
-            identifier = self.match_type(Identifier)
+            identifier = typing.cast(Identifier, self.match_type(Identifier))
 
             # Wrap expression in "defined()" call
             prefix = [
@@ -1207,7 +1230,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid ifdef directive")
 
-    def ifndef(self):
+    def ifndef(self) -> IfNode:
         """
         Match an #ifdef directive.
         Return an IfNode with !defined() in the expression.
@@ -1217,7 +1240,7 @@ class DirectiveParser(Parser):
         initial_pos = self.pos
         try:
             self.match_value(Identifier, "ifndef")
-            identifier = self.match_type(Identifier)
+            identifier = typing.cast(Identifier, self.match_type(Identifier))
 
             # Wrap expression in "!defined()" call
             prefix = [
@@ -1233,7 +1256,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid ifndef directive")
 
-    def elif_(self):
+    def elif_(self) -> ElIfNode:
         """
         Match an #elif directive.
         Return an ElIfNode.
@@ -1251,7 +1274,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid elif directive.")
 
-    def else_(self):
+    def else_(self) -> ElseNode:
         """
         Match an #else directive.
         Return an ElseNode.
@@ -1266,7 +1289,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid else directive.")
 
-    def endif(self):
+    def endif(self) -> EndIfNode:
         """
         Match an #endif directive.
         Return an EndIfNode.
@@ -1281,7 +1304,7 @@ class DirectiveParser(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid endif directive.")
 
-    def parse(self):
+    def parse(self) -> DirectiveNode:
         """
         Parse a preprocessor directive.
         Return a DirectiveNode.
@@ -1322,7 +1345,7 @@ class DirectiveParser(Parser):
             raise ParseError("Not a directive.")
 
 
-def macro_from_definition_string(string):
+def macro_from_definition_string(string: str) -> Macro | MacroFunction:
     """
     Construct a Macro or MacroFunction by parsing a string of the form
     MACRO=expansion.
@@ -1338,12 +1361,16 @@ def macro_from_definition_string(string):
         expansion = parser.tokens[parser.pos :]
         parser.pos = len(parser.tokens)
     else:
-        expansion = [NumericalConstant("Unknown", None, False, "1")]
+        expansion = [NumericalConstant("Unknown", -1, False, "1")]
 
     return make_macro(identifier, args, expansion)
 
 
-def make_macro(identifier, args, expansion):
+def make_macro(
+    identifier: Identifier,
+    args: list[Identifier] | None,
+    expansion: list[Token],
+) -> Macro | MacroFunction:
     """
     Return a Macro or MacroFunction based on the contents of args.
     """
@@ -1353,12 +1380,14 @@ def make_macro(identifier, args, expansion):
         return MacroFunction(identifier, args, expansion)
 
 
+# FIXME: Macro and MacroFunction should be refactored into a single class.
+#        Macro should be equivalent to a MacroFunction with 0 arguments.
 class Macro:
     """
     Represents a macro definition.
     """
 
-    def __init__(self, name, replacement):
+    def __init__(self, name: Identifier, replacement: list[Token]) -> None:
         self.name = name.token
         self.replacement = replacement
 
@@ -1370,19 +1399,22 @@ class Macro:
             self.replacement[0].prev_white = False
             self.preproc_replacement()
 
-    def which_arg(self, tok):
+        self.arg_needs_expansion: list[bool] = []
+
+    def which_arg(self, tok: str) -> int:
         """
         Returns index token occpuies in this Macro's list. -1 if not found.
         """
         return -1
 
-    def preproc_replacement(self):
+    def preproc_replacement(self) -> None:
         """
         Preprocess macroexpansion of ## where it doesn't abut arguments.
         """
-        res_tokens = []
+        res_tokens: list[Token] = []
         idx = 0
 
+        tok: Token | None
         while idx < len(self.replacement):
             tok = self.replacement[idx]
             if tok.token == "##":
@@ -1422,10 +1454,10 @@ class Macro:
             res_tokens.append(tok)
         self.replacement = res_tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return _representation_string(self)
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return (a list containing) a string with a lexable representation of
         this Macro.
@@ -1433,10 +1465,15 @@ class Macro:
         replacement_str = " ".join([str(t) for t in self.replacement])
         return [f"{self.name!s}={replacement_str!s}"]
 
-    def replace(self):
+    def replace(
+        self,
+        input_args: list[tuple[list[Token], list[Token]]] = [],
+    ) -> list[Token]:
         """
         Return the expansion list for this Macro.
         """
+        if len(input_args) > 0:
+            raise RuntimeError("Macro expected 0 arguments.")
         return self.replacement
 
 
@@ -1445,7 +1482,12 @@ class MacroFunction(Macro):
     Represents a macro function definition.
     """
 
-    def __init__(self, name, args, replacement):
+    def __init__(
+        self,
+        name: Identifier,
+        args: list[Identifier],
+        replacement: list[Token],
+    ) -> None:
         self.args = [x.token for x in args]
         self.has_strcat = False
         if len(self.args) > 0:
@@ -1462,7 +1504,7 @@ class MacroFunction(Macro):
         self.arg_needs_expansion = [False for x in self.args]
         super().__init__(name, replacement)
 
-    def which_arg(self, tok):
+    def which_arg(self, tok: str) -> int:
         """
         Returns index token occupies in this Macro's list. -1 if not found.
         """
@@ -1471,13 +1513,13 @@ class MacroFunction(Macro):
         except ValueError:
             return -1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return _representation_string(
             self,
             attrs=["name", "args", "replacement"],
         )
 
-    def spelling(self):
+    def spelling(self) -> list[str]:
         """
         Return the string representation of this macro in the input code.
         Useful primarily for debugging and generating error messages.
@@ -1486,7 +1528,10 @@ class MacroFunction(Macro):
         arg_str = ",".join([str(t) for t in self.args])
         return [f"{self.name!s}({arg_str!s})={replacement_str!s}"]
 
-    def replace(self, input_args):
+    def replace(
+        self,
+        input_args: list[tuple[list[Token], list[Token]]] = [],
+    ) -> list[Token]:
         """
         Return the substituted replacement for this macro.
         input_args is expected to be a list of (original,
@@ -1509,10 +1554,12 @@ class MacroFunction(Macro):
             input_args[len(self.args) - 1 :] = [(va_args_raw, va_args_exp)]
 
         if self.has_strcat:
-            res_tokens = []
+            res_tokens: list[Token] = []
             last_cat = False
             idx = 0
 
+            # FIXME: There are multiple redefinitions of the form X = [X].
+            #        This breaks type hinting and makes the code hard to read.
             while idx < len(self.replacement):
                 tok = self.replacement[idx]
                 if tok.token == "##":
@@ -1521,34 +1568,34 @@ class MacroFunction(Macro):
                     if not last_cat:
                         try:
                             argidx = self.args.index(last.token)
-                            last = input_args[argidx][0]  # Unexpanded arg
+                            last = input_args[argidx][0]  # type: ignore
                         except ValueError:
-                            last = [last]
+                            last = [last]  # type: ignore
                     else:
-                        last = [last]
+                        last = [last]  # type: ignore
                     idx += 1
                     nexttok = self.replacement[idx]
                     try:
                         argidx = self.args.index(nexttok.token)
-                        nexttok = input_args[argidx][0]  # Unexpanded arg
+                        nexttok = input_args[argidx][0]  # type: ignore
                     except ValueError:
-                        nexttok = [nexttok]
-                    if len(last) > 0:
-                        lex = Lexer(last[-1].token + nexttok[0].token)
-                        tok = lex.tokenize_one()
+                        nexttok = [nexttok]  # type: ignore
+                    if len(last) > 0:  # type: ignore
+                        lex = Lexer(last[-1].token + nexttok[0].token)  # type: ignore # noqa: E501
+                        tok = lex.tokenize_one()  # type: ignore
                         if tok is None:
                             raise ParseError(
                                 f"Invalid concatenation: {lex.string}",
                             )
-                        tok.prev_white = last[-1].prev_white
-                        toadd = last[:-1] + [tok] + nexttok[1:]
+                        tok.prev_white = last[-1].prev_white  # type: ignore
+                        toadd = last[:-1] + [tok] + nexttok[1:]  # type: ignore
                         if toadd[0].prev_white != prev_white:
                             cp = copy(toadd[0])
                             cp.prev_white = prev_white
                             toadd[0].prev_white = prev_white
                         res_tokens.extend(toadd)
                     else:
-                        res_tokens.extend(nexttok)
+                        res_tokens.extend(nexttok)  # type: ignore
                     last_cat = True
                 elif tok.token == "#":
                     idx += 1
@@ -1559,12 +1606,16 @@ class MacroFunction(Macro):
                     nexttok = self.replacement[idx]
                     try:
                         argidx = self.args.index(nexttok.token)
-                        tok = input_args[argidx][0]  # Unexpanded arg
+                        unexpanded_tokens = input_args[argidx][0]
                     except ValueError:
                         raise ParseError(
                             "# was not followed by a macro argument.",
                         )
-                    tok = Lexer.stringify(tok)
+                    tok = Lexer.stringify(unexpanded_tokens)  # type: ignore
+                    if tok is None:
+                        raise ParseError(
+                            "Failed to stringify unexpanded tokens.",
+                        )
                     tok.prev_white = tok.prev_white
                     last_cat = True
                     res_tokens.append(tok)
@@ -1600,19 +1651,19 @@ class ExpanderHelper:
     Class to act as token stream for expansion stack.
     """
 
-    def __init__(self, tokens):
-        self.tokens = copy(tokens)
+    def __init__(self, tokens: list[Token]):
+        self.tokens = typing.cast(list[Token | None], copy(tokens))
         self.pos = 0
         self.pre_expand = False
 
-    def eol(self):
+    def eol(self) -> bool:
         """
         Returns boolean value of the read point being past end of stream.
         """
 
         return self.pos >= len(self.tokens)
 
-    def splice(self, upper_helper):
+    def splice(self, upper_helper: ExpanderHelper) -> None:
         """
         Insert upper_helper ExpanderHelper into this
         stream's pos, advancing pos to end of insertion.
@@ -1620,14 +1671,19 @@ class ExpanderHelper:
 
         start = list(filter(None, self.tokens[: self.pos]))
 
-        self.tokens = (
-            start
-            + list(filter(None, upper_helper.tokens))
-            + list(filter(None, self.tokens[self.pos :]))
+        # This type cast is necessary because we're explicitly filtering None.
+        self.tokens = typing.cast(
+            list[Token | None],
+            (
+                start
+                + list(filter(None, upper_helper.tokens))
+                + list(filter(None, self.tokens[self.pos :]))
+            ),
         )
+
         self.pos = len(start)
 
-    def peek_tok(self):
+    def peek_tok(self) -> Token | None:
         """
         Return at the current token without advancing.
         """
@@ -1635,7 +1691,7 @@ class ExpanderHelper:
         t = self.tokens[self.pos]
         return t
 
-    def consume_tok(self):
+    def consume_tok(self) -> Token | None:
         """
         Consume the current token, advance, and return it.
         """
@@ -1645,7 +1701,7 @@ class ExpanderHelper:
         self.pos += 1
         return t
 
-    def replace_tok(self, item):
+    def replace_tok(self, item: Token) -> None:
         """
         Replace the token at the current position with item. Advance.
         """
@@ -1659,16 +1715,17 @@ class MacroExpander:
     A specialized token parser for recognizing and expanding macros.
     """
 
-    def __init__(self, platform):
+    # FIXME: Cannot define Platform type without circular import.
+    def __init__(self, platform: Any) -> None:
         self.platform = platform
-        self.parser_stack = []
-        self.no_expand = []
+        self.parser_stack: list[ExpanderHelper] = []
+        self.no_expand: list[str] = []
 
         # Prevent infinite recursion. CPP standard requires this be at
         # least 15, but cpp has been implemented to handle 200.
         self.max_level = 200
 
-    def pop(self):
+    def pop(self) -> None:
         """
         Pop top of parser stack off and splice tokens in it into below parser.
         If top of stack is also bottom, instead throw EndofParse.
@@ -1680,7 +1737,11 @@ class MacroExpander:
         self.no_expand.pop()
         self.parser_stack[-1].splice(top_toks)
 
-    def push(self, tokens, ident=None):
+    def push(
+        self,
+        tokens: list[Token],
+        ident: str,
+    ) -> None:
         """
         Push a new ExpanderHelper for tokens with new no_expand ident onto
         stack.
@@ -1690,7 +1751,7 @@ class MacroExpander:
         self.no_expand.append(ident)
         self.overflow_check()
 
-    def advance_tok(self):
+    def advance_tok(self) -> None:
         """
         Advance top expander's position, possibly popping to get to where that
         can be done.
@@ -1699,7 +1760,7 @@ class MacroExpander:
             self.pop()
         self.parser_stack[-1].pos += 1
 
-    def peek_tok_pop(self):
+    def peek_tok_pop(self) -> Token | None:
         """
         Peek at top expander's token, possibly popping to get to where that
         can be done.
@@ -1708,7 +1769,7 @@ class MacroExpander:
             self.pop()
         return self.parser_stack[-1].peek_tok()
 
-    def peek_tok(self):
+    def peek_tok(self) -> Token | None:
         """
         Return the next logical token, or None if exhausted
         This may require us to peek 'down' in the stack.
@@ -1723,7 +1784,7 @@ class MacroExpander:
             else:
                 return self.parser_stack[pos].peek_tok()
 
-    def consume_tok(self):
+    def consume_tok(self) -> Token | None:
         """
         Consume top parser's current token, possibly popping to get where that
         can be done.
@@ -1732,7 +1793,7 @@ class MacroExpander:
             self.pop()
         return self.parser_stack[-1].consume_tok()
 
-    def replace_tok(self, tok):
+    def replace_tok(self, tok: Token) -> None:
         """
         Replace top parser's current token with tok, possibly popping to get
         where that can be done.
@@ -1741,32 +1802,37 @@ class MacroExpander:
             self.pop()
         self.parser_stack[-1].replace_tok(tok)
 
-    def overflow_check(self):
+    def overflow_check(self) -> None:
         """
         Raise MacroExpandOverflow if we exceed the allowable # of levels.
         """
         if len(self.parser_stack) >= self.max_level:
             raise MacroExpandOverflow
 
-    def not_expandable(self, ident):
+    def not_expandable(self, ident: Identifier) -> bool:
         """
         Return if this token is in the no-expansion list.
         """
         return not ident.expandable or ident.token in self.no_expand
 
-    def defined(self, identifier):
+    def defined(self, identifier: Identifier) -> NumericalConstant:
         """
         Expand a call to defined(X) or defined X.
         """
         value = self.platform.is_defined(str(identifier))
         return NumericalConstant(
             "EXPANSION",
-            identifier.line,
+            identifier.col,
             identifier.prev_white,
             value,
         )
 
-    def expand(self, tokens, ident=None, pre_expand=False):
+    def expand(
+        self,
+        tokens: list[Token],
+        ident: Identifier | None = None,
+        pre_expand: bool = False,
+    ) -> list[Token]:
         """
         Expand a list of input tokens using the specified definitions.
         Return a list of new tokens, representing the result of macro
@@ -1793,16 +1859,18 @@ class MacroExpander:
                 if ctok.token == "defined":
                     try:
                         tok = self.peek_tok()
+                        if tok is None:
+                            raise ParseError("Failed to peek at next token")
                         if tok.token == "(":
                             _ = self.consume_tok()
-                            ident = self.consume_tok()
+                            ident = typing.cast(Identifier, self.consume_tok())
                             paren = self.peek_tok()
-                            if paren.token != ")":
+                            if paren is None or paren.token != ")":
                                 raise ParseError(
                                     "Expected ')' after 'defined' identifier",
                                 )
                         else:
-                            ident = tok
+                            ident = typing.cast(Identifier, tok)
                         if not isinstance(ident, Identifier):
                             raise ParseError(
                                 "Expected identifier after 'defined'",
@@ -1836,11 +1904,14 @@ class MacroExpander:
                     else:
                         _ = self.consume_tok()
                     args = []
-                    current_arg = []
+                    current_arg: list[Token] = []
                     open_paren_count = 1
 
                     while True:
                         tok = self.consume_tok()
+                        if tok is None:
+                            raise ParseError("Macro expansion failed.")
+
                         if tok.token == "," and open_paren_count == 1:
                             args.append(current_arg)
                             current_arg = []
@@ -1869,7 +1940,7 @@ class MacroExpander:
                             )
                             pre_expanded.append((arg, arg_expansion))
                         else:
-                            pre_expanded.append((arg,))
+                            pre_expanded.append((arg, []))
                     # Proper expand
                     replacement = macro_lookup.replace(pre_expanded)
                     if isinstance(replacement, list) and len(replacement) > 0:
@@ -1890,7 +1961,8 @@ class MacroExpander:
             self.no_expand.pop()
             return res_tokens
         except MacroExpandOverflow:
-            self.__init__(self.platform)
+            self.parser_stack = []
+            self.no_expand = []
             return [NumericalConstant("EXPANSION", -1, False, "0")]
 
 
@@ -1932,7 +2004,7 @@ class ExpressionEvaluator(Parser):
         "%": OpInfo(11, "LEFT"),
     }
 
-    def call(self):
+    def call(self) -> np.integer:
         """
         Match a built-in call or function-like macro and return 0.
 
@@ -1954,7 +2026,7 @@ class ExpressionEvaluator(Parser):
             self.pos = initial_pos
             raise ParseError("Invalid function call.")
 
-    def term(self):
+    def term(self) -> np.integer:
         """
         Match a constant, function call or identifier and convert it to
         Python syntax.
@@ -1967,17 +2039,20 @@ class ExpressionEvaluator(Parser):
         # Match an integer constant.
         # Convert from C-style literals to Python integers.
         try:
-            constant = self.match_type(NumericalConstant)
+            numerical_constant = typing.cast(
+                NumericalConstant,
+                self.match_type(NumericalConstant),
+            )
 
             # Use prefix (if present) to determine base
             base = 10
             bases = {"0x": 16, "0X": 16, "0b": 2, "0B": 2}
             try:
-                prefix = constant.token[0:2]
+                prefix = numerical_constant.token[0:2]
                 base = bases[prefix]
-                value = constant.token[2:]
+                value = numerical_constant.token[2:]
             except KeyError:
-                value = constant.token
+                value = numerical_constant.token
 
             # Strip suffix (if present)
             suffix = None
@@ -2012,8 +2087,11 @@ class ExpressionEvaluator(Parser):
         # Match a character constant.
         # Convert from character literals to integer value.
         try:
-            constant = self.match_type(CharacterConstant)
-            return np.int64(ord(constant.token))
+            char_constant = typing.cast(
+                CharacterConstant,
+                self.match_type(CharacterConstant),
+            )
+            return np.int64(ord(char_constant.token))
         except ParseError:
             self.pos = initial_pos
 
@@ -2037,7 +2115,7 @@ class ExpressionEvaluator(Parser):
             + "function call.",
         )
 
-    def primary(self):
+    def primary(self) -> np.integer:
         """
         Match a simple expression
         <primary> := [<unary-op><expression>|'('<expression>')'|<term>]
@@ -2046,7 +2124,7 @@ class ExpressionEvaluator(Parser):
 
         # Match <unary-op><expression>
         try:
-            operator = self.match_type(Operator)
+            operator = typing.cast(Operator, self.match_type(Operator))
             if operator.token in ExpressionEvaluator.UnaryOperators:
                 (prec, assoc) = ExpressionEvaluator.UnaryOperators[
                     operator.token
@@ -2079,7 +2157,7 @@ class ExpressionEvaluator(Parser):
             + "identifier/constant.",
         )
 
-    def expression(self, min_precedence=0):
+    def expression(self, min_precedence: int = 0) -> np.integer:
         """
         Match a preprocessor expression.
         Minimum precedence used to match operators during precedence
@@ -2098,7 +2176,7 @@ class ExpressionEvaluator(Parser):
                 >= min_precedence
             )
         ):
-            operator = self.match_type(Operator)
+            operator = typing.cast(Operator, self.match_type(Operator))
             (prec, assoc) = ExpressionEvaluator.BinaryOperators[operator.token]
 
             # The ternary conditional operator is treated as a
@@ -2132,7 +2210,7 @@ class ExpressionEvaluator(Parser):
 
         return expr
 
-    def __expression_list(self):
+    def __expression_list(self) -> list[np.integer]:
         """
         Match a comma-separated list of expressions.
         Return an empty list or the expressions.
@@ -2152,7 +2230,10 @@ class ExpressionEvaluator(Parser):
             return exprs
 
     @staticmethod
-    def __apply_unary_op(op, operand):
+    def __apply_unary_op(
+        op: str,
+        operand: np.integer,
+    ) -> np.integer:
         """
         Apply the specified unary operator: op operand
         """
@@ -2161,14 +2242,18 @@ class ExpressionEvaluator(Parser):
         elif op == "+":
             return +operand
         elif op == "!":
-            return not operand
+            return np.int64(not operand)
         elif op == "~":
             return ~operand
         else:
             raise ValueError("Not a valid unary operator.")
 
     @staticmethod
-    def __apply_binary_op(op, lhs, rhs):
+    def __apply_binary_op(
+        op: str,
+        lhs: np.integer,
+        rhs: np.integer,
+    ) -> np.integer:
         """
         Apply the specified binary operator: lhs op rhs
         """
@@ -2211,7 +2296,7 @@ class ExpressionEvaluator(Parser):
         else:
             raise ValueError("Not a binary operator.")
 
-    def evaluate(self):
+    def evaluate(self) -> bool:
         """
         Evaluate a preprocessor expression.
         Return True/False or raises an exception if the expression is
@@ -2229,9 +2314,9 @@ class SourceTree:
     Represents a source file as a tree of directive and code nodes.
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         self.root = FileNode(filename)
-        self._latest_node = self.root
+        self._latest_node: Node = self.root
 
     def walk(self) -> Iterable[Node]:
         """
@@ -2243,7 +2328,7 @@ class SourceTree:
         """
         yield from self.root.walk()
 
-    def visit(self, visitor: Callable[[Node], Visit]):
+    def visit(self, visitor: Callable[[Node], Visit]) -> None:
         """
         Visit each node in the tree via a preorder traversal, using the
         supplied visitor.
@@ -2255,10 +2340,10 @@ class SourceTree:
         """
         self.root.visit(visitor)
 
-    def associate_file(self, filename):
+    def associate_file(self, filename: str) -> None:
         self.root.filename = filename
 
-    def walk_to_tree_insertion_point(self):
+    def walk_to_tree_insertion_point(self) -> None:
         """
         This function modifies self._latest_node to be a node that can
         be a valid sibling of a tree continue node or a tree end node.
@@ -2270,6 +2355,9 @@ class SourceTree:
             self._latest_node.is_start_node()
             or self._latest_node.is_cont_node()
         ):
+            if self._latest_node.parent is None:
+                raise RuntimeError("Failed to walk tree.")
+
             self._latest_node = self._latest_node.parent
             if self._latest_node == self.root:
                 log.error(
@@ -2277,11 +2365,14 @@ class SourceTree:
                 )
                 break
 
-    def __insert_in_place(self, new_node, parent):
+    # FIXME: Checking for None here is simpler than modifying all calls.
+    def __insert_in_place(self, new_node: Node, parent: Node | None) -> None:
+        if parent is None:
+            raise RuntimeError("Cannot create node if parent is None")
         parent.add_child(new_node)
         self._latest_node = new_node
 
-    def insert(self, new_node):
+    def insert(self, new_node: Node) -> None:
         """
         Handle the logic of proper node insertion.
         """
