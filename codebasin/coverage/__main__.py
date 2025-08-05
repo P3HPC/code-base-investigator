@@ -132,6 +132,8 @@ def _compute(args: argparse.Namespace) -> None:
         unused_lines: list[int] = []
         tree = state.get_tree(filename)
         association = state.get_map(filename)
+        if tree is None or association is None:
+            raise RuntimeError(f"Missing tree or association for {'filename'}")
         for node in [n for n in tree.walk() if isinstance(n, CodeNode)]:
             if not node.lines:
                 continue

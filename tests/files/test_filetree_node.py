@@ -44,7 +44,7 @@ class TestFileTreeNode(unittest.TestCase):
         self.assertEqual(node.children, dict())
         self.assertFalse(node.is_root)
         self.assertEqual(node.name, self.path.name)
-        self.assertEqual(node.platforms, [])
+        self.assertEqual(node.platforms, set())
         self.assertEqual(node.sloc, 0)
         self.assertTrue(node.is_dir())
         self.assertFalse(node.is_symlink())
