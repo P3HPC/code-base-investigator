@@ -744,7 +744,7 @@ class DefineNode(DirectiveNode):
         if self.value is None:
             raise RuntimeError("Cannot expand macro to None")
         macro = make_macro(self.identifier, self.args, self.value)
-        kwargs["preprocessor"].define(self.identifier.token, macro)
+        kwargs["preprocessor"].define(macro)
         return False
 
 
@@ -760,7 +760,7 @@ class UndefNode(DirectiveNode):
         """
         Add a definition into the platform, and return false
         """
-        kwargs["preprocessor"].undefine(self.identifier.token)
+        kwargs["preprocessor"].undefine(self.identifier)
         return False
 
 
@@ -1705,25 +1705,36 @@ class Preprocessor:
             self._definitions = {}
             for definition in defines:
                 macro = macro_from_definition_string(definition)
-                self.define(macro.name, macro)
+                self.define(macro)
 
         self._skip_includes: list[str] = []
         self._found_incl: dict[str, str | None] = {}
 
-    def undefine(self, identifier: str) -> None:
+    def define(self, macro: Macro | MacroFunction) -> None:
         """
-        Undefine a macro for this platform, if it's defined.
-        """
-        if identifier in self._definitions:
-            del self._definitions[identifier]
+        Define a macro, as if the preprocessor encountered #define.
+        If the macro is already defined, has no effect.
 
-    def define(self, identifier: str, macro: Macro | MacroFunction) -> None:
+        Parameters
+        ----------
+        macro: Macro
+            The macro to define.
         """
-        Define a new macro for this platform, only if it's not already
-        defined.
+        # TODO: Check if this is consistent with other preprocessors.
+        if macro.name not in self._definitions:
+            self._definitions[macro.name] = macro
+
+    def undefine(self, identifier: Identifier) -> None:
         """
-        if identifier not in self._definitions:
-            self._definitions[identifier] = macro
+        Undefine a previously defined macro.
+
+        Parameters
+        ----------
+        identifier: Identifier
+            The identifier associated with the macro.
+        """
+        if identifier.token in self._definitions:
+            del self._definitions[identifier.token]
 
     def add_include_to_skip(self, fn: str) -> None:
         """
@@ -1750,12 +1761,18 @@ class Preprocessor:
             return "1"
         return "0"
 
-    def get_macro(self, identifier: str) -> Macro | MacroFunction | None:
+    def get_macro(
+        self,
+        identifier: Identifier,
+    ) -> Macro | MacroFunction | None:
         """
-        Return either a macro definition (if it's defined), or None.
+        Returns
+        -------
+        Macro | MacroFunction | None
+            The macro associated with `identifier`, or None.
         """
-        if identifier in self._definitions:
-            return self._definitions[identifier]
+        if identifier.token in self._definitions:
+            return self._definitions[identifier.token]
         return None
 
     def find_include_file(
@@ -2039,7 +2056,7 @@ class MacroExpander:
                     self.replace_tok(itok)
                     continue
 
-                macro_lookup = self.preprocessor.get_macro(ctok.token)
+                macro_lookup = self.preprocessor.get_macro(ctok)
                 if not macro_lookup:
                     self.parser_stack[-1].pos -= 1
                     self.replace_tok(ctok)
