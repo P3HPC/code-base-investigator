@@ -1736,6 +1736,29 @@ class Preprocessor:
         if identifier.token in self._definitions:
             del self._definitions[identifier.token]
 
+    def get_macro(
+        self,
+        identifier: Identifier,
+    ) -> Macro | MacroFunction | None:
+        """
+        Returns
+        -------
+        Macro | MacroFunction | None
+            The macro associated with `identifier`, or None.
+        """
+        if identifier.token in self._definitions:
+            return self._definitions[identifier.token]
+        return None
+
+    def has_macro(self, identifier: Identifier) -> bool:
+        """
+        Returns
+        -------
+        bool
+            True if `identifier` is defined and False otherwise.
+        """
+        return self.get_macro(identifier) is not None
+
     def add_include_to_skip(self, fn: str) -> None:
         """
         Add an include file to the skip list for this platform. The file will
@@ -1750,30 +1773,6 @@ class Preprocessor:
         processed or skipped.
         """
         return fn not in self._skip_includes
-
-    # FIXME: This should return a bool, but the usage relies on a str.
-    def is_defined(self, identifier: str) -> str:
-        """
-        Return a string representing whether the macro named by 'identifier' is
-        defined.
-        """
-        if identifier in self._definitions:
-            return "1"
-        return "0"
-
-    def get_macro(
-        self,
-        identifier: Identifier,
-    ) -> Macro | MacroFunction | None:
-        """
-        Returns
-        -------
-        Macro | MacroFunction | None
-            The macro associated with `identifier`, or None.
-        """
-        if identifier.token in self._definitions:
-            return self._definitions[identifier.token]
-        return None
 
     def find_include_file(
         self,
@@ -1986,7 +1985,10 @@ class MacroExpander:
         """
         Expand a call to defined(X) or defined X.
         """
-        value = self.preprocessor.is_defined(str(identifier))
+        if self.preprocessor.has_macro(identifier):
+            value = "1"
+        else:
+            value = "0"
         return NumericalConstant(
             "EXPANSION",
             identifier.col,
