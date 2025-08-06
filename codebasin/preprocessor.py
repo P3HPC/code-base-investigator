@@ -16,6 +16,7 @@ from collections.abc import Callable, Iterable
 from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -559,7 +560,7 @@ class Node:
         """
         return False
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         """
         Determine if the children of this node are active, by evaluating
         the statement.
@@ -610,7 +611,7 @@ class FileNode(Node):
     def __str__(self) -> str:
         return str(self.filename)
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         """
         Since a FileNode is always used as a root node, we are only
         interested in its children.
@@ -720,9 +721,9 @@ class PragmaNode(DirectiveNode):
 
     expr: list[Token]
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         if self.expr and str(self.expr[0]) == "once":
-            kwargs["platform"].add_include_to_skip(kwargs["filename"])
+            kwargs["preprocessor"].add_include_to_skip(kwargs["filename"])
         return False
 
 
@@ -736,14 +737,14 @@ class DefineNode(DirectiveNode):
     args: list[Identifier] | None = None
     value: list[Token] | None = None
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         """
         Add a definition into the platform, and return false
         """
         if self.value is None:
             raise RuntimeError("Cannot expand macro to None")
         macro = make_macro(self.identifier, self.args, self.value)
-        kwargs["platform"].define(self.identifier.token, macro)
+        kwargs["preprocessor"].define(self.identifier.token, macro)
         return False
 
 
@@ -755,11 +756,11 @@ class UndefNode(DirectiveNode):
 
     identifier: Identifier
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         """
         Add a definition into the platform, and return false
         """
-        kwargs["platform"].undefine(self.identifier.token)
+        kwargs["preprocessor"].undefine(self.identifier.token)
         return False
 
 
@@ -800,7 +801,7 @@ class IncludeNode(DirectiveNode):
 
     value: IncludePath | list[Token]
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         """
         Extract the filename from the #include. This cannot happen when
         parsing because of "computed includes" like #include FOO. After
@@ -814,24 +815,28 @@ class IncludeNode(DirectiveNode):
             include_path = self.value.path
             is_system_include = self.value.system
         else:
-            expansion = MacroExpander(kwargs["platform"]).expand(self.value)
+            expansion = MacroExpander(kwargs["preprocessor"]).expand(
+                self.value,
+            )
             path_obj = DirectiveParser(expansion).include_path()
             include_path = path_obj.path
             is_system_include = path_obj.system
 
         this_path = os.path.dirname(kwargs["filename"])
-        include_file = kwargs["platform"].find_include_file(
+        include_file = kwargs["preprocessor"].find_include_file(
             include_path,
             this_path,
             is_system_include,
         )
 
-        if include_file and kwargs["platform"].process_include(include_file):
+        if include_file and kwargs["preprocessor"].process_include(
+            include_file,
+        ):
             # include files use the same language as the file itself,
             # irrespective of file extension.
             lang = kwargs["state"].langs[kwargs["filename"]]
             kwargs["state"].insert_file(include_file, lang)
-            kwargs["state"].associate(include_file, kwargs["platform"])
+            kwargs["state"].associate(include_file, kwargs["preprocessor"])
 
         if not include_file:
             filename = kwargs["filename"]
@@ -858,9 +863,11 @@ class IfNode(DirectiveNode):
     def is_start_node() -> bool:
         return True
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         # Perform macro substitution with tokens
-        expanded_tokens = MacroExpander(kwargs["platform"]).expand(self.expr)
+        expanded_tokens = MacroExpander(kwargs["preprocessor"]).expand(
+            self.expr,
+        )
 
         # Evaluate the expanded tokens
         return ExpressionEvaluator(expanded_tokens).evaluate()
@@ -891,7 +898,7 @@ class ElseNode(DirectiveNode):
     def is_cont_node() -> bool:
         return True
 
-    def evaluate_for_platform(self, **kwargs: Any) -> bool:
+    def evaluate(self, **kwargs: Any) -> bool:
         return True
 
 
@@ -1646,26 +1653,62 @@ class MacroFunction(Macro):
         return substituted_tokens
 
 
-class Platform:
+class Preprocessor:
     """
-    Represents a platform, and everything associated with a platform.
-    Contains a list of definitions, and include paths.
+    Represents a specific instance of a preprocessor, including:
+    - Active macro definitions
+    - Includes that should only be processed once
+    - The root directory
+    - The name of the platform associated with this pre-processor
     """
 
-    def __init__(self, name: str, _root_dir: str) -> None:
-        self._definitions: dict[str, Macro | MacroFunction] = {}
+    def __init__(
+        self,
+        *,
+        platform_name: str | None = None,
+        rootdir: str | os.PathLike[str] | None = None,
+        include_paths: list[str | os.PathLike[str]] | None = None,
+        defines: list[str] | None = None,
+    ) -> None:
+        if platform_name is None:
+            self.platform_name = None
+        elif not isinstance(platform_name, str):
+            raise TypeError("'platform_name' must be a string.")
+        else:
+            self.platform_name = platform_name
+
+        if rootdir is None:
+            self.rootdir = None
+        elif not isinstance(rootdir, (str, os.PathLike)):
+            raise TypeError("'rootdir' must be PathLike.")
+        else:
+            self.rootdir = Path(rootdir)
+
+        self._include_paths: list[Path]
+        if include_paths is None:
+            self._include_paths = []
+        elif not all(
+            [isinstance(p, (str, os.PathLike)) for p in include_paths],
+        ):
+            raise TypeError(
+                "Each path in 'include_paths' must be PathLike.",
+            )
+        else:
+            self._include_paths = [Path(p) for p in include_paths]
+
+        self._definitions: dict[str, Macro | MacroFunction]
+        if defines is None:
+            self._definitions = {}
+        elif not all([isinstance(d, str) for d in defines]):
+            raise TypeError("'defines' must be a list of strings.")
+        else:
+            self._definitions = {}
+            for definition in defines:
+                macro = macro_from_definition_string(definition)
+                self.define(macro.name, macro)
+
         self._skip_includes: list[str] = []
-        self._include_paths: list[str] = []
-        self._root_dir = _root_dir
-        self.name = name
-        self.found_incl: dict[str, str | None] = {}
-
-    def add_include_path(self, path: str) -> None:
-        """
-        Insert a new path into the list of include paths for this
-        platform.
-        """
-        self._include_paths.append(path)
+        self._found_incl: dict[str, str | None] = {}
 
     def undefine(self, identifier: str) -> None:
         """
@@ -1729,7 +1772,7 @@ class Platform:
         do.
         """
         try:
-            return self.found_incl[filename]
+            return self._found_incl[filename]
         except KeyError:
             pass
 
@@ -1744,13 +1787,13 @@ class Platform:
             test_path = os.path.abspath(os.path.join(path, filename))
             if os.path.isfile(test_path):
                 include_file = test_path
-                self.found_incl[filename] = include_file
+                self._found_incl[filename] = include_file
                 return include_file
 
         # TODO: Check this optimization is always valid.
         if include_file is not None:
             raise RuntimeError(f"Expected 'None', got '{filename}'")
-        self.found_incl[filename] = None
+        self._found_incl[filename] = None
         return None
 
 
@@ -1823,8 +1866,8 @@ class MacroExpander:
     A specialized token parser for recognizing and expanding macros.
     """
 
-    def __init__(self, platform: Platform) -> None:
-        self.platform = platform
+    def __init__(self, preprocessor: Preprocessor) -> None:
+        self.preprocessor = preprocessor
         self.parser_stack: list[ExpanderHelper] = []
         self.no_expand: list[str] = []
 
@@ -1926,7 +1969,7 @@ class MacroExpander:
         """
         Expand a call to defined(X) or defined X.
         """
-        value = self.platform.is_defined(str(identifier))
+        value = self.preprocessor.is_defined(str(identifier))
         return NumericalConstant(
             "EXPANSION",
             identifier.col,
@@ -1996,7 +2039,7 @@ class MacroExpander:
                     self.replace_tok(itok)
                     continue
 
-                macro_lookup = self.platform.get_macro(ctok.token)
+                macro_lookup = self.preprocessor.get_macro(ctok.token)
                 if not macro_lookup:
                     self.parser_stack[-1].pos -= 1
                     self.replace_tok(ctok)
