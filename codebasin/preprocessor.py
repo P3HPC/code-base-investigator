@@ -1749,7 +1749,7 @@ class Platform:
 
         # TODO: Check this optimization is always valid.
         if include_file is not None:
-            raise RuntimeError("Expected 'None', got '{filename}'")
+            raise RuntimeError(f"Expected 'None', got '{filename}'")
         self.found_incl[filename] = None
         return None
 
