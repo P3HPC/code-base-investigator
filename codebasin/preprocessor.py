@@ -1781,11 +1781,23 @@ class Preprocessor:
         is_system_include: bool = False,
     ) -> str | None:
         """
-        Determine and return the full path to an include file, named
-        'filename' using the include paths for this platform.
+        Determine and return the full path to `filename`.
 
-        System includes do not include the rootdir, while local includes
-        do.
+        Parameters
+        ----------
+        filename: str
+            The name of the include file to find.
+
+        this_path: str
+            The path where the preprocessor is currently running.
+
+        is_system_include: bool, default: False
+            Whether the include file is a system header or not.
+
+        Returns
+        -------
+        str | None
+            The full path to `filename` if it was found and `None` otherwise.
         """
         try:
             return self._found_incl[filename]
