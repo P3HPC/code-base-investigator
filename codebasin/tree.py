@@ -97,7 +97,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _tree(args: argparse.Namespace):
+def _tree(args: argparse.Namespace) -> None:
     # Refuse to print a tree with no levels, consistent with tree utility.
     if args.levels is not None and args.levels <= 0:
         raise ValueError("Number of levels must be greater than 0.")
@@ -158,7 +158,7 @@ def _tree(args: argparse.Namespace):
     sys.exit(0)
 
 
-def cli(argv: list[str]) -> int:
+def cli(argv: list[str]) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
@@ -171,10 +171,10 @@ def cli(argv: list[str]) -> int:
     stderr_handler.setFormatter(Formatter(colors=sys.stderr.isatty()))
     log.addHandler(stderr_handler)
 
-    return _tree(args)
+    _tree(args)
 
 
-def main():
+def main() -> None:
     try:
         cli(sys.argv[1:])
     except Exception as e:

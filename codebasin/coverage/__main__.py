@@ -102,7 +102,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _compute(args: argparse.Namespace):
+def _compute(args: argparse.Namespace) -> None:
     dbpath = os.path.realpath(args.ifile)
     covpath = os.path.realpath(args.ofile)
     for path in [dbpath, covpath]:
@@ -132,6 +132,8 @@ def _compute(args: argparse.Namespace):
         unused_lines: list[int] = []
         tree = state.get_tree(filename)
         association = state.get_map(filename)
+        if tree is None or association is None:
+            raise RuntimeError(f"Missing tree or association for {'filename'}")
         for node in [n for n in tree.walk() if isinstance(n, CodeNode)]:
             if not node.lines:
                 continue
@@ -156,7 +158,7 @@ def _compute(args: argparse.Namespace):
     sys.exit(0)
 
 
-def cli(argv: list[str]) -> int:
+def cli(argv: list[str]) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
     command = args.func
@@ -188,10 +190,10 @@ def cli(argv: list[str]) -> int:
     stderr_handler.setFormatter(Formatter(colors=sys.stderr.isatty()))
     log.addHandler(stderr_handler)
 
-    return command(args)
+    command(args)
 
 
-def main():
+def main() -> None:
     try:
         cli(sys.argv[1:])
     except Exception as e:

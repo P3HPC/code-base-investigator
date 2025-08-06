@@ -8,14 +8,16 @@ and parsing source files as part of a code base.
 import collections
 import logging
 import os
+from collections.abc import Generator, KeysView
 from pathlib import Path
+from typing import Any
 
 from tqdm import tqdm
 
 from codebasin import CodeBase, file_parser, platform, preprocessor
 from codebasin.language import FileLanguage
 from codebasin.platform import Platform
-from codebasin.preprocessor import CodeNode, Node, Visit
+from codebasin.preprocessor import CodeNode, Node, SourceTree, Visit
 
 log = logging.getLogger(__name__)
 
@@ -28,12 +30,12 @@ class ParserState:
     platforms.
     """
 
-    def __init__(self, summarize_only):
-        self.trees = {}
-        self.maps = {}
-        self.langs = {}
+    def __init__(self, summarize_only: bool) -> None:
+        self.trees: dict[str, SourceTree] = {}
+        self.maps: dict[str, dict[Node, set]] = {}
+        self.langs: dict[str, str | None] = {}
         self.summarize_only = summarize_only
-        self._path_cache = {}
+        self._path_cache: dict[str, str] = {}
 
     def _get_realpath(self, path: str) -> str:
         """
@@ -47,7 +49,7 @@ class ParserState:
             self._path_cache[path] = real
         return self._path_cache[path]
 
-    def insert_file(self, fn, language=None):
+    def insert_file(self, fn: str, language: str | None = None) -> None:
         """
         Build a new tree for a source file, and create an association
         map for it.
@@ -65,13 +67,13 @@ class ParserState:
             else:
                 self.langs[fn] = FileLanguage(fn).get_language()
 
-    def get_filenames(self):
+    def get_filenames(self) -> KeysView[str]:
         """
         Return all of the filenames for files parsed so far.
         """
         return self.trees.keys()
 
-    def get_tree(self, fn):
+    def get_tree(self, fn: str) -> SourceTree | None:
         """
         Return the SourceTree associated with a filename
         """
@@ -80,7 +82,7 @@ class ParserState:
             return None
         return self.trees[fn]
 
-    def get_map(self, fn):
+    def get_map(self, fn: str) -> dict[Node, set] | None:
         """
         Return the NodeAssociationMap associated with a filename
         """
@@ -106,17 +108,21 @@ class ParserState:
 
             tree = self.get_tree(fn)
             association = self.get_map(fn)
+            if tree is None or association is None:
+                raise RuntimeError(f"Missing tree or association for '{fn}'")
             for node in [n for n in tree.walk() if isinstance(n, CodeNode)]:
                 platform = frozenset(association[node])
                 setmap[platform] += node.num_lines
         return setmap
 
-    def associate(self, filename: str, platform: Platform):
+    def associate(self, filename: str, platform: Platform) -> None:
         """
         Update the association for the provided filename and platform.
         """
         tree = self.get_tree(filename)
         association = self.get_map(filename)
+        if tree is None or association is None:
+            raise RuntimeError(f"Missing tree or association for '{filename}'")
         branch_taken = []
 
         def associator(node: Node) -> Visit:
@@ -145,14 +151,15 @@ class ParserState:
         tree.visit(associator)
 
 
+# FIXME: configuration should be refactored to avoid such a complex type.
 def find(
-    rootdir,
-    codebase,
-    configuration,
+    rootdir: str,
+    codebase: CodeBase,
+    configuration: dict[Any, list[dict[str, Any]]],
     *,
-    summarize_only=True,
-    show_progress=False,
-):
+    summarize_only: bool = True,
+    show_progress: bool = False,
+) -> ParserState:
     """
     Find codepaths in the files provided and return a mapping of source
     lines to platforms.
@@ -164,7 +171,9 @@ def find(
         rootdir = str(rootdir)
 
     # Build up a list of potential source files.
-    def _potential_file_generator(codebase):
+    def _potential_file_generator(
+        codebase: CodeBase,
+    ) -> Generator[Path, None, None]:
         for directory in codebase._directories:
             yield from Path(directory).rglob("*")
 
@@ -203,7 +212,7 @@ def find(
         disable=not show_progress,
     ):
         log.debug(f"Parsing {f}")
-        state.insert_file(f)
+        state.insert_file(str(f))
 
     # Process each tree, by associating nodes with platforms
     for p in tqdm(

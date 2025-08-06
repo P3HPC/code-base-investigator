@@ -3,6 +3,7 @@
 """
 Contains functions for generating command-line reports.
 """
+from __future__ import annotations
 
 import filecmp
 import hashlib
@@ -13,6 +14,7 @@ import os
 import re
 import string
 import sys
+import typing
 import warnings
 from collections import defaultdict
 from collections.abc import Sequence
@@ -28,7 +30,7 @@ from codebasin.preprocessor import CodeNode
 log = logging.getLogger(__name__)
 
 
-def _heading(text: str, stream: TextIO):
+def _heading(text: str, stream: TextIO) -> str:
     """
     Parameters
     ----------
@@ -50,7 +52,7 @@ def _heading(text: str, stream: TextIO):
         return f"{text}\n{underline}"
 
 
-def extract_platforms(setmap):
+def extract_platforms(setmap: dict[frozenset[str], int]) -> list[str]:
     """
     Extract a list of unique platforms from a set map
     """
@@ -133,22 +135,22 @@ def average_coverage(
     return total / len(platforms)
 
 
-def distance(setmap, p1, p2) -> float:
+def distance(setmap: dict[frozenset, int], p1: str, p2: str) -> float:
     """
     Compute distance between two platforms
     """
-    total = 0
+    total = 0.0
     for pset, count in setmap.items():
         if (p1 in pset) or (p2 in pset):
             total += count
-    d = 0
+    d = 0.0
     for pset, count in setmap.items():
         if (p1 in pset) ^ (p2 in pset):
             d += count / float(total)
     return d
 
 
-def divergence(setmap) -> float:
+def divergence(setmap: dict[frozenset, int]) -> float:
     """
     Compute code divergence as defined by Harrell and Kitson
     i.e. average of pair-wise distances between platform sets
@@ -166,7 +168,10 @@ def divergence(setmap) -> float:
     return d / float(npairs)
 
 
-def summary(setmap: dict[frozenset[str], int], stream: TextIO = sys.stdout):
+def summary(
+    setmap: dict[frozenset[str], int],
+    stream: TextIO = sys.stdout,
+) -> None:
     """
     Produce a summary report for the platform set, including
     a breakdown of SLOC per platform subset, code divergence, etc.
@@ -216,7 +221,7 @@ def clustering(
     output_name: str,
     setmap: dict[frozenset[str], int],
     stream: TextIO = sys.stdout,
-):
+) -> None:
     """
     Produce a clustering report for the platform set.
 
@@ -314,8 +319,8 @@ def find_duplicates(codebase: CodeBase) -> list[set[Path]]:
     """
     # Search for possible matches using a hash, ignoring symlinks.
     possible_matches: dict[str, set] = {}
-    for path in codebase:
-        path = Path(path)
+    for p in codebase:
+        path = Path(p)
         if path.is_symlink():
             continue
         with open(path, "rb") as f:
@@ -347,7 +352,7 @@ def find_duplicates(codebase: CodeBase) -> list[set[Path]]:
     return confirmed_matches
 
 
-def duplicates(codebase: CodeBase, stream: TextIO = sys.stdout):
+def duplicates(codebase: CodeBase, stream: TextIO = sys.stdout) -> None:
     """
     Produce a report identifying sets of duplicate files.
 
@@ -447,29 +452,29 @@ class FileTree:
 
         def __init__(
             self,
-            path,
-            setmap=None,
-            is_root=False,
-        ):
+            path: str | os.PathLike[str],
+            setmap: dict[frozenset[str], int] | None = None,
+            is_root: bool = False,
+        ) -> None:
             self.path = Path(path)
             if setmap is None:
                 setmap = defaultdict(int)
             self.setmap = setmap
-            self.children = {}
+            self.children: dict[str, FileTree.Node] = {}
             self.is_root = is_root
 
         @property
-        def name(self):
+        def name(self) -> str:
             if self.is_root:
                 return str(self.path)
             return str(self.path.name)
 
         @property
-        def platforms(self):
-            return extract_platforms(self.setmap)
+        def platforms(self) -> set[str]:
+            return set(extract_platforms(self.setmap))
 
         @property
-        def sloc(self):
+        def sloc(self) -> int:
             count = 0
             for k, v in self.setmap.items():
                 if len(k) == 0:
@@ -477,10 +482,10 @@ class FileTree:
                 count += v
             return count
 
-        def is_dir(self):
+        def is_dir(self) -> bool:
             return self.path.is_dir()
 
-        def is_symlink(self):
+        def is_symlink(self) -> bool:
             return self.path.is_symlink()
 
         def _platforms_str(
@@ -599,14 +604,14 @@ class FileTree:
             ]
             return "[" + " | ".join(info) + "]"
 
-    def __init__(self, rootdir: str | os.PathLike[str]):
+    def __init__(self, rootdir: str | os.PathLike[str]) -> None:
         self.root = FileTree.Node(rootdir, is_root=True)
 
     def insert(
         self,
         filename: str | os.PathLike[str],
         setmap: dict[frozenset[str], int],
-    ):
+    ) -> None:
         """
         Insert a new file into the tree, creating as many nodes as necessary.
 
@@ -648,13 +653,13 @@ class FileTree:
 
     def _print(
         self,
-        node: Node,
+        node: FileTree.Node,
         depth: int = 0,
         prefix: str = "",
         connector: str = "",
         fancy: bool = True,
         levels: int | None = None,
-    ):
+    ) -> list[str]:
         """
         Recursive helper function to print all nodes in a FileTree.
 
@@ -740,7 +745,7 @@ class FileTree:
 
         return lines
 
-    def write_to(self, stream: TextIO, levels: int | None = None):
+    def write_to(self, stream: TextIO, levels: int | None = None) -> None:
         """
         Write the FileTree to the specified stream.
 
@@ -767,7 +772,7 @@ def files(
     stream: TextIO = sys.stdout,
     prune: bool = False,
     levels: int | None = None,
-):
+) -> None:
     """
     Produce a file tree representing the code base.
 
@@ -794,30 +799,33 @@ def files(
         )
 
     # Build up a tree from the list of files.
-    tree = FileTree(codebase.directories[0])
+    ftree = FileTree(codebase.directories[0])
     for f in codebase:
         setmap: dict[frozenset[str], int] = defaultdict(int)
         if state:
+            stree = state.get_tree(f)
             association = state.get_map(f)
+            if stree is None or association is None:
+                raise RuntimeError(f"Missing tree or association for '{f}'")
             for node in filter(
                 lambda x: isinstance(x, CodeNode),
-                state.get_tree(f).walk(),
+                stree.walk(),
             ):
                 platform = frozenset(association[node])
-                setmap[platform] += node.num_lines
+                setmap[platform] += typing.cast(CodeNode, node).num_lines
         if prune:
             # Prune unused files from the tree.
             platforms = set().union(*setmap.keys())
             if len(platforms) == 0:
                 continue
-        tree.insert(f, setmap)
+        ftree.insert(f, setmap)
 
     # Print a legend.
     legend = []
     legend += ["Legend:"]
-    for i, platform in enumerate(sorted(tree.root.platforms)):
+    for i, p in enumerate(sorted(ftree.root.platforms)):
         label = string.ascii_uppercase[i]
-        legend += [f"\033[33m{label}\033[0m: {platform}"]
+        legend += [f"\033[33m{label}\033[0m: {p}"]
     legend += [""]
     legend += ["Columns:"]
     header = [
@@ -834,4 +842,4 @@ def files(
     print(legend_string, file=stream)
 
     # Print the tree.
-    tree.write_to(stream, levels=levels)
+    ftree.write_to(stream, levels=levels)

@@ -7,7 +7,7 @@ import os
 import shlex
 import typing
 import warnings
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable
 from pathlib import Path
 
 import pathspec
@@ -41,6 +41,9 @@ class CompileCommand:
     arguments: list[string], optional
         The `argv` for this command, including the executable as `argv[0]`.
 
+    command: string, optional
+        The command as a string.
+
     output: string, optional
         The name of the file produced by this command, or None if not
         specified.
@@ -48,12 +51,12 @@ class CompileCommand:
 
     def __init__(
         self,
-        filename,
-        directory=None,
-        arguments=None,
-        command=None,
-        output=None,
-    ):
+        filename: str,
+        directory: str | None = None,
+        arguments: list[str] | None = None,
+        command: str | None = None,
+        output: str | None = None,
+    ) -> None:
         """
         Raises
         ------
@@ -69,35 +72,39 @@ class CompileCommand:
         self._output = output
 
     @property
-    def directory(self):
+    def directory(self) -> str | None:
         return self._directory
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return self._filename
 
     @property
-    def arguments(self):
+    def arguments(self) -> list[str]:
         if self._arguments is None:
-            return shlex.split(self._command)
+            if self._command is not None:
+                return shlex.split(self._command)
+            else:
+                raise ValueError(
+                    "CompileCommand requires arguments or command.",
+                )
         else:
             return self._arguments
 
     @property
-    def output(self):
+    def output(self) -> str | None:
         return self._output
 
-    def __str__(self):
-        if self._command is None:
-            return " ".join(self._arguments)
-        else:
-            return self._command
+    def __str__(self) -> str:
+        return " ".join(self.arguments)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CompileCommand):
+            return NotImplemented
         props = ["directory", "filename", "arguments", "output"]
         return all([getattr(self, p) == getattr(other, p) for p in props])
 
-    def is_supported(self):
+    def is_supported(self) -> bool:
         """
         Returns
         -------
@@ -115,7 +122,7 @@ class CompileCommand:
         return False
 
     @classmethod
-    def from_json(cls, instance: dict):
+    def from_json(cls, instance: dict) -> CompileCommand:
         """
         Parameters
         ----------
@@ -148,7 +155,7 @@ class CompilationDatabase:
     def __init__(self, commands: list[CompileCommand]):
         self.commands = commands
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[CompileCommand, None, None]:
         """
         Iterate over all commands in the compilation database.
         """
@@ -220,7 +227,7 @@ class CodeBase:
     def __init__(
         self,
         *directories: str | os.PathLike[str],
-        exclude_patterns: Iterable[str] = [],
+        exclude_patterns: list[str] = [],
     ):
         """
         Raises
@@ -242,18 +249,18 @@ class CodeBase:
         self._directories = [Path(d).resolve() for d in directories]
         self._excludes = exclude_patterns
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"CodeBase(directories={self.directories}, "
             + f"exclude_patterns={self.exclude_patterns})"
         )
 
     @property
-    def directories(self):
+    def directories(self) -> list[str]:
         return [str(d) for d in self._directories]
 
     @property
-    def exclude_patterns(self):
+    def exclude_patterns(self) -> list[str]:
         return self._excludes
 
     def __contains__(self, path: os.PathLike) -> bool:
@@ -303,7 +310,7 @@ class CodeBase:
 
         return True
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[str, None, None]:
         """
         Iterate over all files in the code base by walking each directory.
         """

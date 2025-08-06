@@ -51,7 +51,7 @@ class FileLanguage:
     ]
     _language_extensions["asm"] = [".s", ".S", ".asm"]
 
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         self._filename = filename
         self._extension = os.path.splitext(self._filename)[1]
         self._language = None
@@ -61,5 +61,5 @@ class FileLanguage:
                 self._language = lang
                 break
 
-    def get_language(self):
+    def get_language(self) -> str | None:
         return self._language

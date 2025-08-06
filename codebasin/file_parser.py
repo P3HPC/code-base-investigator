@@ -4,12 +4,14 @@
 Contains classes and functions related to parsing a file,
 and building a tree of nodes from it.
 """
+from __future__ import annotations
 
 import logging
 import os
 
 from codebasin import preprocessor
 from codebasin.file_source import get_file_source
+from codebasin.preprocessor import SourceTree
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +22,14 @@ class LineGroup:
     number of countable lines for the group.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.line_count = 0
         self.start_line = -1
         self.end_line = -1
-        self.lines = []
-        self.body = []
+        self.lines: list[int] = []
+        self.body: list[str] = []
 
-    def empty(self):
+    def empty(self) -> bool:
         """
         Return a boolean that tells if this group contains any line
         information or not.
@@ -40,7 +42,13 @@ class LineGroup:
             return False
         return True
 
-    def add_line(self, phys_int, sloc_count, source=None, lines=None):
+    def add_line(
+        self,
+        phys_int: tuple[int, int],
+        sloc_count: int,
+        source: str | None = None,
+        lines: list[int] | None = None,
+    ) -> None:
         """
         Add a line to this line group. Update the extent appropriately,
         and if it's a countable line, add it to the line count.
@@ -58,7 +66,7 @@ class LineGroup:
         if lines is not None:
             self.lines.extend(lines)
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the countable group
         """
@@ -68,7 +76,7 @@ class LineGroup:
         self.lines = []
         self.body = []
 
-    def merge(self, line_group):
+    def merge(self, line_group: LineGroup) -> None:
         """
         Merge another line group into this line group, and reset the
         other group.
@@ -95,11 +103,15 @@ class FileParser:
     information about source lines and helping to build the source tree.
     """
 
-    def __init__(self, _filename):
+    def __init__(self, _filename: str):
         self._filename = os.path.abspath(_filename)
 
     @staticmethod
-    def handle_directive(out_tree, groups, logical_line):
+    def handle_directive(
+        out_tree: SourceTree,
+        groups: dict[str, LineGroup],
+        logical_line: str,
+    ) -> None:
         """
         Handle inserting code and directive nodes, where appropriate.
         Update the file group, and reset the code and directive groups.
@@ -121,7 +133,7 @@ class FileParser:
         groups["file"].merge(groups["directive"])
 
     @staticmethod
-    def insert_code_node(tree, line_group):
+    def insert_code_node(tree: SourceTree, line_group: LineGroup) -> None:
         """
         Build a code node, and insert it into the source tree
         """
@@ -135,7 +147,11 @@ class FileParser:
         tree.insert(new_node)
 
     @staticmethod
-    def insert_directive_node(tree, line_group, logical_line):
+    def insert_directive_node(
+        tree: SourceTree,
+        line_group: LineGroup,
+        logical_line: str,
+    ) -> None:
         """
         Build a directive node by parsing a directive line, and insert a
         new directive node into the tree.
@@ -163,7 +179,12 @@ class FileParser:
 
         tree.insert(new_node)
 
-    def parse_file(self, *, summarize_only=False, language=None):
+    def parse_file(
+        self,
+        *,
+        summarize_only: bool = False,
+        language: str | None = None,
+    ) -> SourceTree:
         """
         Parse the file that this parser points at, build a SourceTree
         representing this file, and return it.
@@ -172,7 +193,7 @@ class FileParser:
         filename = self._filename
         out_tree = preprocessor.SourceTree(filename)
         file_source = get_file_source(filename, language)
-        if not file_source:
+        if not callable(file_source):
             raise RuntimeError(
                 f"{filename} doesn't appear "
                 + "to be a language this tool can process",
