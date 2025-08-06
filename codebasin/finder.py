@@ -14,10 +14,9 @@ from typing import Any
 
 from tqdm import tqdm
 
-from codebasin import CodeBase, file_parser, platform, preprocessor
+from codebasin import CodeBase, file_parser, preprocessor
 from codebasin.language import FileLanguage
-from codebasin.platform import Platform
-from codebasin.preprocessor import CodeNode, Node, SourceTree, Visit
+from codebasin.preprocessor import CodeNode, Node, Platform, SourceTree, Visit
 
 log = logging.getLogger(__name__)
 
@@ -229,7 +228,7 @@ def find(
             leave=False,
             disable=not show_progress,
         ):
-            file_platform = platform.Platform(p, rootdir)
+            file_platform = Platform(p, rootdir)
 
             for path in e["include_paths"]:
                 file_platform.add_include_path(path)
