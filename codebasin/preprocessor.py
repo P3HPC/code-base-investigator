@@ -1684,8 +1684,8 @@ class Platform:
 
     def add_include_to_skip(self, fn: str) -> None:
         """
-        Define a new macro for this platform, only if it's not already
-        defined.
+        Add an include file to the skip list for this platform. The file will
+        not be processed when encountered in the include directives.
         """
         if fn not in self._skip_includes:
             self._skip_includes.append(fn)
