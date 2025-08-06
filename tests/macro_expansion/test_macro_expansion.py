@@ -5,7 +5,8 @@ import logging
 import unittest
 from pathlib import Path
 
-from codebasin import CodeBase, finder, platform, preprocessor
+from codebasin import CodeBase, finder, preprocessor
+from codebasin.preprocessor import Platform
 
 
 class TestMacroExpansion(unittest.TestCase):
@@ -62,7 +63,7 @@ class TestMacroExpansion(unittest.TestCase):
         test_str = "CATTEST=first ## 2"
         macro = preprocessor.macro_from_definition_string(test_str)
         tokens = preprocessor.Lexer("CATTEST").tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         expected_tokens = preprocessor.Lexer("first2").tokenize()
@@ -75,7 +76,7 @@ class TestMacroExpansion(unittest.TestCase):
         test_str = "STR(x)= #x"
         macro = preprocessor.macro_from_definition_string(test_str)
         tokens = preprocessor.Lexer('STR(foo("4 + 5"))').tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         expected_tokens = preprocessor.Lexer('"foo(\\"4 + 5\\")"').tokenize()
@@ -89,7 +90,7 @@ class TestMacroExpansion(unittest.TestCase):
         macro = preprocessor.macro_from_definition_string(test_str)
         to_expand_str = r'STR(L      + 2-2 "\" \n")'
         tokens = preprocessor.Lexer(to_expand_str).tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         expected_str = r'TEST "L + 2-2 \"\\\" \\n\""'
@@ -103,7 +104,7 @@ class TestMacroExpansion(unittest.TestCase):
         mac_xstr = preprocessor.macro_from_definition_string("xstr(s)=str(s)")
         mac_str = preprocessor.macro_from_definition_string("str(s)=#s")
         mac_def = preprocessor.macro_from_definition_string("foo=4")
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {x.name: x for x in [mac_xstr, mac_str, mac_def]}
 
         tokens = preprocessor.Lexer("str(foo)").tokenize()
@@ -148,7 +149,7 @@ class TestMacroExpansion(unittest.TestCase):
             tokens = preprocessor.Lexer(
                 'eprintf("%d, %f, %e", a, b, c)',
             ).tokenize()
-            p = platform.Platform("Test", self.rootdir)
+            p = Platform("Test", self.rootdir)
             p._definitions = {macro.name: macro}
             expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
             self.assertTrue(len(expanded_tokens) == len(expected_expansion))
@@ -172,7 +173,7 @@ class TestMacroExpansion(unittest.TestCase):
         def_string = "FOO=(4 + FOO)"
         macro = preprocessor.macro_from_definition_string(def_string)
         tokens = preprocessor.Lexer("FOO").tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         self.assertTrue(len(expanded_tokens) == len(expected_expansion))
@@ -201,7 +202,7 @@ class TestMacroExpansion(unittest.TestCase):
         def_string = "FOO=FOO"
         macro = preprocessor.macro_from_definition_string(def_string)
         tokens = preprocessor.Lexer("FOO").tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         self.assertTrue(len(expanded_tokens) == len(expected_expansion))
@@ -226,7 +227,7 @@ class TestMacroExpansion(unittest.TestCase):
         def_string = "foo(x)=bar x"
         macro = preprocessor.macro_from_definition_string(def_string)
         tokens = preprocessor.Lexer("foo(foo) (2)").tokenize()
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {macro.name: macro}
         expanded_tokens = preprocessor.MacroExpander(p).expand(tokens)
         expected_tokens = preprocessor.Lexer("bar foo (2)").tokenize()
@@ -270,7 +271,7 @@ class TestMacroExpansion(unittest.TestCase):
         x_tokens = preprocessor.Lexer("x").tokenize()
         y_tokens = preprocessor.Lexer("y").tokenize()
 
-        p = platform.Platform("Test", self.rootdir)
+        p = Platform("Test", self.rootdir)
         p._definitions = {x_macro.name: x_macro, y_macro.name: y_macro}
 
         x_expanded_tokens = preprocessor.MacroExpander(p).expand(x_tokens)
