@@ -1691,6 +1691,8 @@ class Preprocessor:
         self._include_paths: list[Path]
         if include_paths is None:
             self._include_paths = []
+        elif not isinstance(include_paths, list):
+            raise TypeError("'include_paths' must be a list of paths.")
         elif not all(
             [isinstance(p, (str, os.PathLike)) for p in include_paths],
         ):
@@ -1703,6 +1705,8 @@ class Preprocessor:
         self._definitions: dict[str, Macro | MacroFunction]
         if defines is None:
             self._definitions = {}
+        elif not isinstance(defines, list):
+            raise TypeError("'defines' must be a list of strings.")
         elif not all([isinstance(d, str) for d in defines]):
             raise TypeError("'defines' must be a list of strings.")
         else:

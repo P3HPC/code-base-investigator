@@ -44,7 +44,19 @@ class TestPreprocessor(unittest.TestCase):
             Preprocessor(include_paths="/not/a/list")
 
         with self.assertRaises(TypeError):
-            Preprocessor(defines="/not/a/list")
+            Preprocessor(include_paths=1)
+
+        with self.assertRaises(TypeError):
+            Preprocessor(include_paths=["/path/to/include", 1])
+
+        with self.assertRaises(TypeError):
+            Preprocessor(defines="NOT_A_LIST")
+
+        with self.assertRaises(TypeError):
+            Preprocessor(defines=1)
+
+        with self.assertRaises(TypeError):
+            Preprocessor(defines=["MACRO", 1])
 
     def test_define(self):
         """Check implementation of define"""
