@@ -128,6 +128,10 @@ class ParserState:
         association = self.get_map(filename)
         if tree is None or association is None:
             raise RuntimeError(f"Missing tree or association for '{filename}'")
+
+        if preprocessor.platform_name is None:
+            raise RuntimeError(f"Cannot associate '{filename}' with 'None'")
+
         branch_taken = []
 
         def associator(node: Node) -> Visit:
