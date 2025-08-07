@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from codebasin import CodeBase, finder, preprocessor
-from codebasin.preprocessor import Platform
+from codebasin.preprocessor import Preprocessor
 
 
 class TestOperators(unittest.TestCase):
@@ -53,7 +53,7 @@ class TestOperators(unittest.TestCase):
     def test_paths(self):
         input_str = r"FUNCTION(looks/2like/a/path/with_/bad%%identifiers)"
         tokens = preprocessor.Lexer(input_str).tokenize()
-        p = Platform("Test", self.rootdir)
+        p = Preprocessor(platform_name="Test")
         macro = preprocessor.macro_from_definition_string("FUNCTION(x)=#x")
         p._definitions = {macro.name: macro}
         _ = preprocessor.MacroExpander(p).expand(tokens)

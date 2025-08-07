@@ -14,9 +14,15 @@ from typing import Any
 
 from tqdm import tqdm
 
-from codebasin import CodeBase, file_parser, preprocessor
+from codebasin import CodeBase, file_parser
 from codebasin.language import FileLanguage
-from codebasin.preprocessor import CodeNode, Node, Platform, SourceTree, Visit
+from codebasin.preprocessor import (
+    CodeNode,
+    Node,
+    Preprocessor,
+    SourceTree,
+    Visit,
+)
 
 log = logging.getLogger(__name__)
 
@@ -114,20 +120,26 @@ class ParserState:
                 setmap[platform] += node.num_lines
         return setmap
 
-    def associate(self, filename: str, platform: Platform) -> None:
+    def associate(self, filename: str, preprocessor: Preprocessor) -> None:
         """
-        Update the association for the provided filename and platform.
+        Update the association for `filename` using `preprocessor`.
         """
         tree = self.get_tree(filename)
         association = self.get_map(filename)
         if tree is None or association is None:
             raise RuntimeError(f"Missing tree or association for '{filename}'")
+
+        if preprocessor.platform_name is None:
+            raise RuntimeError(f"Cannot associate '{filename}' with 'None'")
+
         branch_taken = []
 
         def associator(node: Node) -> Visit:
-            association[node].add(platform.name)
-            active = node.evaluate_for_platform(
-                platform=platform,
+            association[node].add(preprocessor.platform_name)
+
+            # TODO: Consider inverting, so preprocessor calls the function.
+            active = node.evaluate(
+                preprocessor=preprocessor,
                 filename=self._get_realpath(filename),
                 state=self,
             )
@@ -228,28 +240,26 @@ def find(
             leave=False,
             disable=not show_progress,
         ):
-            file_platform = Platform(p, rootdir)
-
-            for path in e["include_paths"]:
-                file_platform.add_include_path(path)
-
-            for definition in e["defines"]:
-                macro = preprocessor.macro_from_definition_string(definition)
-                file_platform.define(macro.name, macro)
+            preprocessor = Preprocessor(
+                platform_name=p,
+                include_paths=e["include_paths"],
+                defines=e["defines"],
+            )
 
             # Process include files.
-            # These modify the file_platform instance, but we throw away
+            # These modify the preprocessor instance, but we throw away
             # the active nodes after processing is complete.
             for include in e["include_files"]:
-                include_file = file_platform.find_include_file(
+                include_file = preprocessor.find_include_file(
                     include,
                     os.path.dirname(e["file"]),
                 )
                 if include_file:
                     state.insert_file(include_file)
-                    state.associate(include_file, file_platform)
+                    state.associate(include_file, preprocessor)
 
             # Process the file, to build a list of associate nodes
-            state.associate(e["file"], file_platform)
+            # TODO: Consider inverting, so preprocessor calls the function.
+            state.associate(e["file"], preprocessor)
 
     return state
