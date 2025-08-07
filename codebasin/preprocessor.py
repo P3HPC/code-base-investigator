@@ -723,7 +723,9 @@ class PragmaNode(DirectiveNode):
 
     def evaluate(self, **kwargs: Any) -> bool:
         if self.expr and str(self.expr[0]) == "once":
-            kwargs["preprocessor"].add_include_to_skip(kwargs["filename"])
+            kwargs["preprocessor"].get_file_info(
+                kwargs["filename"],
+            ).is_include_once = True
         return False
 
 
@@ -829,8 +831,11 @@ class IncludeNode(DirectiveNode):
             is_system_include,
         )
 
-        if include_file and kwargs["preprocessor"].process_include(
-            include_file,
+        if (
+            include_file
+            and not kwargs["preprocessor"]
+            .get_file_info(include_file)
+            .is_include_once
         ):
             # include files use the same language as the file itself,
             # irrespective of file extension.
@@ -1662,6 +1667,14 @@ class Preprocessor:
     - The name of the platform associated with this pre-processor
     """
 
+    @dataclass
+    class FileInfo:
+        """
+        Stores information the Preprocessor knows about a file.
+        """
+
+        is_include_once: bool = False
+
     def __init__(
         self,
         *,
@@ -1707,7 +1720,7 @@ class Preprocessor:
                 macro = macro_from_definition_string(definition)
                 self.define(macro)
 
-        self._skip_includes: list[str] = []
+        self._file_info: dict[str, Preprocessor.FileInfo] = {}
         self._found_incl: dict[str, str | None] = {}
 
     def define(self, macro: Macro | MacroFunction) -> None:
@@ -1759,20 +1772,23 @@ class Preprocessor:
         """
         return self.get_macro(identifier) is not None
 
-    def add_include_to_skip(self, fn: str) -> None:
+    def get_file_info(self, filename: str) -> Preprocessor.FileInfo:
         """
-        Add an include file to the skip list for this platform. The file will
-        not be processed when encountered in the include directives.
-        """
-        if fn not in self._skip_includes:
-            self._skip_includes.append(fn)
+        Access information the preprocessor has about `filename`.
 
-    def process_include(self, fn: str) -> bool:
+        Parameters
+        ----------
+        filename: str
+            The name of the filename of interest.
+
+        Returns
+        -------
+        FileInfo
+            The `FileInfo` associated with this file.
         """
-        Return a boolean stating if this include file should be
-        processed or skipped.
-        """
-        return fn not in self._skip_includes
+        if filename not in self._file_info:
+            self._file_info[filename] = Preprocessor.FileInfo()
+        return self._file_info[filename]
 
     def find_include_file(
         self,
