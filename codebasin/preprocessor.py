@@ -1799,28 +1799,20 @@ class Preprocessor:
         str | None
             The full path to `filename` if it was found and `None` otherwise.
         """
-        try:
+        if filename in self._found_incl:
             return self._found_incl[filename]
-        except KeyError:
-            pass
-
-        include_file = None
 
         local_paths = []
         if not is_system_include:
             local_paths += [this_path]
 
-        # Determine the path to the include file, if it exists
         for path in local_paths + self._include_paths:
             test_path = os.path.abspath(os.path.join(path, filename))
             if os.path.isfile(test_path):
-                include_file = test_path
-                self._found_incl[filename] = include_file
-                return include_file
+                self._found_incl[filename] = test_path
+                return test_path
 
         # TODO: Check this optimization is always valid.
-        if include_file is not None:
-            raise RuntimeError(f"Expected 'None', got '{filename}'")
         self._found_incl[filename] = None
         return None
 
