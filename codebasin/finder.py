@@ -238,7 +238,6 @@ def find(
         ):
             preprocessor = Preprocessor(
                 platform_name=p,
-                rootdir=rootdir,
                 include_paths=e["include_paths"],
                 defines=e["defines"],
             )

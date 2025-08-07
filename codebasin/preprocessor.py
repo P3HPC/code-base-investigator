@@ -1663,7 +1663,6 @@ class Preprocessor:
     Represents a specific instance of a preprocessor, including:
     - Active macro definitions
     - Includes that should only be processed once
-    - The root directory
     - The name of the platform associated with this pre-processor
     """
 
@@ -1679,7 +1678,6 @@ class Preprocessor:
         self,
         *,
         platform_name: str | None = None,
-        rootdir: str | os.PathLike[str] | None = None,
         include_paths: list[str | os.PathLike[str]] | None = None,
         defines: list[str] | None = None,
     ) -> None:
@@ -1689,13 +1687,6 @@ class Preprocessor:
             raise TypeError("'platform_name' must be a string.")
         else:
             self.platform_name = platform_name
-
-        if rootdir is None:
-            self.rootdir = None
-        elif not isinstance(rootdir, (str, os.PathLike)):
-            raise TypeError("'rootdir' must be PathLike.")
-        else:
-            self.rootdir = Path(rootdir)
 
         self._include_paths: list[Path]
         if include_paths is None:

@@ -53,7 +53,7 @@ class TestOperators(unittest.TestCase):
     def test_paths(self):
         input_str = r"FUNCTION(looks/2like/a/path/with_/bad%%identifiers)"
         tokens = preprocessor.Lexer(input_str).tokenize()
-        p = Preprocessor(platform_name="Test", rootdir=self.rootdir)
+        p = Preprocessor(platform_name="Test")
         macro = preprocessor.macro_from_definition_string("FUNCTION(x)=#x")
         p._definitions = {macro.name: macro}
         _ = preprocessor.MacroExpander(p).expand(tokens)
